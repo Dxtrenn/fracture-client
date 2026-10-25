@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https://mc-heads.net https://api.mcsrvstat.us https://cdn.modrinth.com http://textures.minecraft.net https://textures.minecraft.net; style-src 'self' 'unsafe-inline'; frame-src https://www.tiktok.com https://open.spotify.com https://accounts.spotify.com https://www.instagram.com https://mccapes.net https://skinmc.net https://namemc.com https://minecraftcapes.net" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https://raw.githubusercontent.com https://i.imgur.com https://mc-heads.net https://api.mcsrvstat.us https://cdn.modrinth.com http://textures.minecraft.net https://textures.minecraft.net; style-src 'self' 'unsafe-inline'; frame-src https://www.tiktok.com https://open.spotify.com https://accounts.spotify.com https://www.instagram.com https://mccapes.net https://skinmc.net https://namemc.com https://minecraftcapes.net" />
   <title>Fracture Client</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -28,14 +28,15 @@
     </div>
     <div class="top-right">
       <nav class="tabs">
-        <button class="tab active" data-tab="play">▶ Play</button>
-        <button class="tab" data-tab="mods">▦ Mods</button>
-        <button class="tab" data-tab="capes">◭ Accessories</button>
+        <button class="tab active" data-tab="play"><span class="ti" data-i="play">▶</span> Play</button>
+        <button class="tab" data-tab="mods"><span class="ti" data-i="mods">▦</span> Mods</button>
+        <button class="tab" data-tab="capes"><span class="ti" data-i="capes">◭</span> Accessories</button>
       </nav>
       <button class="account-chip" id="accountChip">
         <img id="chipHead" alt="" />
         <div><small id="chipSub">Not signed in</small><b id="chipName">Guest User</b></div>
       </button>
+      <button class="icon-btn" id="themeBtn" title="Customize your theme">✎</button>
       <button class="icon-btn" id="consoleBtn" title="Console">&gt;_</button>
       <button class="icon-btn" id="settingsBtn" title="Settings">⚙</button>
       <button class="icon-btn" data-win="min" title="Minimize">—</button>
@@ -185,6 +186,45 @@
         <img class="side-logo" id="sideLogo" src="logo-full.png" alt="" />
         <img id="skin" class="skin hidden" alt="" />
         <div id="sideName" class="side-name"></div>
+      </div>
+      <div class="switcher theme-panel" id="themePanel">
+        <div class="sw-head"><h2>Customize your theme ✎</h2><button class="icon-btn" id="themeClose">✕</button></div>
+        <div class="tp-body">
+          <h4>Appearance</h4>
+          <div class="seg" id="tpMode">
+            <button data-mode="dark" class="active" title="Dark">☾</button>
+            <button data-mode="light" title="Light">☀</button>
+          </div>
+
+          <h4>Colors</h4>
+          <div class="sv" id="tpSv"><div class="sv-white"></div><div class="sv-black"></div><div class="sv-knob" id="tpSvKnob"></div></div>
+          <div class="hue" id="tpHue"><div class="hue-knob" id="tpHueKnob"></div></div>
+          <div class="stops" id="tpStops"></div>
+          <button class="tp-wide" id="tpAddColor">＋ Add Color</button>
+
+          <h4>Controls</h4>
+          <div class="tp-row"><span>Color Intensity</span><b id="tpIntensityLabel">0%</b></div>
+          <input type="range" id="tpIntensity" min="0" max="100" value="0" />
+          <div class="tp-row"><span>Gradient Angle</span><b id="tpAngleLabel">135°</b></div>
+          <input type="range" id="tpAngle" min="0" max="360" value="135" />
+
+          <h4>Font</h4>
+          <select id="tpFont"></select>
+
+          <h4>Icons</h4>
+          <div class="seg icons" id="tpIcons">
+            <button data-icons="classic" class="active">▶ ▦ ◭</button>
+            <button data-icons="emoji">🎮 🧩 🎨</button>
+            <button data-icons="none">Text only</button>
+          </div>
+
+          <button class="tp-wide" id="tpSurprise">🎲 Surprise Me!</button>
+          <button class="tp-wide muted-btn" id="tpReset">Reset</button>
+        </div>
+        <div class="tp-foot">
+          <button class="tp-back" id="tpBack">Back</button>
+          <button class="tp-apply" id="tpApply">Apply</button>
+        </div>
       </div>
       <div class="switcher" id="switcher">
         <div class="sw-head"><h2>ACCOUNT SWITCHER</h2><button class="icon-btn close" id="swClose">✕</button></div>

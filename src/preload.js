@@ -17,6 +17,8 @@ contextBridge.exposeInMainWorld("fractur", {
   libraryDelete: (kind, id) => ipcRenderer.invoke("library:delete", kind, id),
   libraryExport: (kind, id) => ipcRenderer.invoke("library:export", kind, id),
   applySkin: (id) => ipcRenderer.invoke("skin:apply", id),
+  getNews: () => ipcRenderer.invoke("news:get"),
+  openNewsLink: (url) => ipcRenderer.invoke("news:open", url),
   fixCrash: () => ipcRenderer.invoke("crash:fix"),
   deviceStart: () => ipcRenderer.invoke("account:deviceStart"),
   deviceCancel: () => ipcRenderer.invoke("account:deviceCancel"),

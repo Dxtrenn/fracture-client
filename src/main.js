@@ -620,6 +620,18 @@ ipcMain.handle("open-external", (_e, url) => {
 
 ipcMain.handle("open-folder", () => shell.openPath(ROOT));
 
+// News posts are published to the GitHub repo by the Fracture News Editor app
+const NEWS_URL = "https://raw.githubusercontent.com/dxtrenn/fracture-client/main/news.json";
+
+ipcMain.handle("news:get", async () => {
+  const data = await getJson(`${NEWS_URL}?t=${Date.now()}`);
+  return Array.isArray(data.posts) ? data.posts.slice(0, 20) : [];
+});
+
+ipcMain.handle("news:open", (_e, url) => {
+  if (/^https:\/\//.test(String(url))) shell.openExternal(url);
+});
+
 ipcMain.handle("server:ping", async (_e, ip) => {
   try {
     const r = await getJson(`https://api.mcsrvstat.us/3/${encodeURIComponent(ip)}`);

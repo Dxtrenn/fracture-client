@@ -103,6 +103,7 @@ async function renderAccount() {
 
 /* Account switcher */
 function toggleSwitcher(open) {
+  if (open && $("themePanel").classList.contains("open")) closeThemePanel(false);
   $("switcher").classList.toggle("open", open);
   if (open) renderSwitcher();
 }
@@ -211,16 +212,44 @@ api.on("device-error", (msg) => {
 });
 
 /* News */
-function renderNews() {
+function renderNewsItems(items) {
   const wrap = $("news");
-  for (const n of NEWS) {
+  wrap.innerHTML = "";
+  for (const n of items) {
     const el = document.createElement("div");
     el.className = "news-item";
-    el.innerHTML = `${n.tag ? `<span class="tag">${n.tag}</span>` : ""}<b></b><p></p>`;
-    el.querySelector("b").textContent = n.title;
-    el.querySelector("p").textContent = n.body;
+    // Posts come from the internet, so everything goes in as text, never HTML
+    if (n.tag) {
+      const tag = document.createElement("span");
+      tag.className = "tag";
+      tag.textContent = n.tag;
+      if (/^#[0-9a-f]{6}$/i.test(n.tagColor || "")) tag.style.background = n.tagColor;
+      el.appendChild(tag);
+    }
+    const title = document.createElement("b");
+    title.textContent = n.title || "";
+    const body = document.createElement("p");
+    body.textContent = n.body || "";
+    el.append(title, body);
+    if (/^https:\/\//.test(n.image || "")) {
+      el.classList.add("has-image");
+      el.style.backgroundImage = `linear-gradient(180deg, rgba(10,10,14,.1), rgba(10,10,14,.92)), url("${encodeURI(n.image)}")`;
+    }
+    if (/^https:\/\//.test(n.link || "")) {
+      el.classList.add("clickable");
+      el.title = n.link;
+      el.onclick = () => api.openNewsLink(n.link);
+    }
     wrap.appendChild(el);
   }
+}
+
+async function renderNews() {
+  renderNewsItems(NEWS);
+  try {
+    const remote = await api.getNews();
+    if (Array.isArray(remote) && remote.length) renderNewsItems(remote);
+  } catch {}
 }
 
 /* Servers */
@@ -805,9 +834,205 @@ document.addEventListener("keydown", (e) => {
   tiktok.sendInputEvent({ type: "keyUp", keyCode });
 });
 
+/* Theme customizer */
+const DEFAULT_THEME = { mode: "dark", colors: ["#ff3b4e", "#ff7a3b"], intensity: 0, angle: 135, font: "Segoe UI", icons: "classic" };
+const THEME_FONTS = ["Segoe UI", "Bahnschrift", "Trebuchet MS", "Verdana", "Tahoma", "Georgia", "Consolas", "Lucida Console", "Franklin Gothic Medium", "Segoe Print", "Comic Sans MS", "Impact"];
+const ICON_SETS = {
+  classic: { play: "▶", mods: "▦", capes: "◭" },
+  emoji: { play: "🎮", mods: "🧩", capes: "🎨" },
+  none: { play: "", mods: "", capes: "" },
+};
+const BASES = {
+  dark: { bg: "#07070a", panel: "#111116", panel2: "#18181f", line: "#22222c", text: "#ececf1", muted: "#7d7d8c", card: "#0d0d12" },
+  light: { bg: "#eeeef3", panel: "#ffffff", panel2: "#e9e9f0", line: "#d6d6e0", text: "#15151c", muted: "#686876", card: "#f5f5f8" },
+};
+
+let theme = { ...DEFAULT_THEME };
+let draft = null;
+let activeStop = 0;
+
+const hexToRgb = (h) => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+const rgbToHex = (r, g, b) => "#" + [r, g, b].map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, "0")).join("");
+const mix = (a, b, t) => { const x = hexToRgb(a), y = hexToRgb(b); return rgbToHex(x[0] + (y[0] - x[0]) * t, x[1] + (y[1] - x[1]) * t, x[2] + (y[2] - x[2]) * t); };
+const rgba = (h, a) => { const [r, g, b] = hexToRgb(h); return `rgba(${r},${g},${b},${a})`; };
+
+function hsvToHex(h, s, v) {
+  const f = (n) => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); };
+  return rgbToHex(f(5) * 255, f(3) * 255, f(1) * 255);
+}
+function hexToHsv(hex) {
+  const [r, g, b] = hexToRgb(hex).map((v) => v / 255);
+  const max = Math.max(r, g, b), d = max - Math.min(r, g, b);
+  let h = 0;
+  if (d) h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [(h * 60 + 360) % 360, max ? d / max : 0, max];
+}
+
+function applyTheme(t) {
+  const base = BASES[t.mode] || BASES.dark;
+  const colors = t.colors.length ? t.colors : DEFAULT_THEME.colors;
+  const k = t.intensity / 100;
+  const root = document.documentElement.style;
+  const tint = (c, amt) => mix(c, colors[0], amt);
+
+  root.setProperty("--accent", colors[0]);
+  root.setProperty("--accent2", colors[colors.length - 1]);
+  root.setProperty("--text", base.text);
+  root.setProperty("--muted", base.muted);
+  root.setProperty("--bg", base.bg);
+  // Intensity tints the background with the gradient and lets it show through the panels
+  root.setProperty("--panel", k ? rgba(tint(base.panel, k * 0.15), 1 - k * 0.45) : base.panel);
+  root.setProperty("--panel2", k ? rgba(tint(base.panel2, k * 0.2), 1 - k * 0.35) : base.panel2);
+  root.setProperty("--card", k ? rgba(tint(base.card, k * 0.15), 1 - k * 0.4) : base.card);
+  root.setProperty("--line", k ? tint(base.line, k * 0.3) : base.line);
+  const stops = colors.map((c) => mix(base.bg, c, k * (t.mode === "light" ? 0.45 : 0.55)));
+  root.setProperty("--bg-image", k ? `linear-gradient(${t.angle}deg, ${stops.length > 1 ? stops.join(", ") : `${stops[0]}, ${base.bg}`})` : "none");
+  root.setProperty("--font", `"${t.font}", "Segoe UI", system-ui, sans-serif`);
+  document.body.classList.toggle("light", t.mode === "light");
+
+  const icons = ICON_SETS[t.icons] || ICON_SETS.classic;
+  document.querySelectorAll(".ti").forEach((el) => (el.textContent = icons[el.dataset.i] || ""));
+}
+
+/* Panel */
+function openThemePanel() {
+  draft = JSON.parse(JSON.stringify(theme));
+  activeStop = 0;
+  $("switcher").classList.remove("open");
+  $("themePanel").classList.add("open");
+  syncThemeForm();
+}
+function closeThemePanel(apply) {
+  if (apply) {
+    theme = draft;
+    settings.theme = theme;
+    api.setSettings(settings);
+    setStatus("Theme applied");
+  }
+  applyTheme(theme);
+  draft = null;
+  $("themePanel").classList.remove("open");
+}
+
+function syncThemeForm() {
+  document.querySelectorAll("#tpMode button").forEach((b) => b.classList.toggle("active", b.dataset.mode === draft.mode));
+  document.querySelectorAll("#tpIcons button").forEach((b) => b.classList.toggle("active", b.dataset.icons === draft.icons));
+  $("tpIntensity").value = draft.intensity;
+  $("tpIntensityLabel").textContent = `${draft.intensity}%`;
+  $("tpAngle").value = draft.angle;
+  $("tpAngleLabel").textContent = `${draft.angle}°`;
+  $("tpFont").value = draft.font;
+  $("tpAddColor").disabled = draft.colors.length >= 4;
+  renderStops();
+  syncPicker();
+  applyTheme(draft);
+}
+
+function renderStops() {
+  const wrap = $("tpStops");
+  wrap.innerHTML = "";
+  draft.colors.forEach((c, i) => {
+    const el = document.createElement("div");
+    el.className = `stop${i === activeStop ? " active" : ""}`;
+    el.innerHTML = `<span class="sw"></span><input maxlength="7" spellcheck="false" />${window.EyeDropper ? `<button data-act="pick" title="Pick from screen">⌖</button>` : ""}${draft.colors.length > 1 ? `<button data-act="del" title="Remove">✕</button>` : ""}`;
+    el.querySelector(".sw").style.background = c;
+    const input = el.querySelector("input");
+    input.value = c.toUpperCase();
+    el.onclick = (e) => { if (e.target.tagName !== "BUTTON" && activeStop !== i) { activeStop = i; renderStops(); syncPicker(); } };
+    input.oninput = () => {
+      if (/^#[0-9a-f]{6}$/i.test(input.value)) { draft.colors[i] = input.value.toLowerCase(); el.querySelector(".sw").style.background = input.value; syncPicker(); applyTheme(draft); }
+    };
+    const pick = el.querySelector("[data-act=pick]");
+    if (pick) pick.onclick = async () => {
+      try {
+        const r = await new EyeDropper().open();
+        draft.colors[i] = r.sRGBHex.toLowerCase();
+        activeStop = i;
+        syncThemeForm();
+      } catch {}
+    };
+    const del = el.querySelector("[data-act=del]");
+    if (del) del.onclick = () => { draft.colors.splice(i, 1); activeStop = Math.min(activeStop, draft.colors.length - 1); syncThemeForm(); };
+    wrap.appendChild(el);
+  });
+}
+
+let pickerHue = 0;
+function syncPicker() {
+  const [h, s, v] = hexToHsv(draft.colors[activeStop]);
+  if (s > 0.01 && v > 0.01) pickerHue = h;
+  $("tpSv").style.background = `hsl(${pickerHue}, 100%, 50%)`;
+  $("tpSvKnob").style.left = `${s * 100}%`;
+  $("tpSvKnob").style.top = `${(1 - v) * 100}%`;
+  $("tpHueKnob").style.left = `${(pickerHue / 360) * 100}%`;
+}
+
+function setActiveColor(hex) {
+  draft.colors[activeStop] = hex;
+  const stop = $("tpStops").children[activeStop];
+  if (stop) { stop.querySelector(".sw").style.background = hex; stop.querySelector("input").value = hex.toUpperCase(); }
+  applyTheme(draft);
+}
+
+function dragOn(el, onMove) {
+  el.addEventListener("pointerdown", (e) => {
+    el.setPointerCapture(e.pointerId);
+    const move = (ev) => {
+      const r = el.getBoundingClientRect();
+      onMove(Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width)), Math.max(0, Math.min(1, (ev.clientY - r.top) / r.height)));
+    };
+    move(e);
+    el.onpointermove = move;
+    el.onpointerup = () => (el.onpointermove = null);
+  });
+}
+
+dragOn($("tpSv"), (x, y) => {
+  $("tpSvKnob").style.left = `${x * 100}%`;
+  $("tpSvKnob").style.top = `${y * 100}%`;
+  setActiveColor(hsvToHex(pickerHue, x, 1 - y));
+});
+dragOn($("tpHue"), (x) => {
+  pickerHue = x * 360;
+  $("tpHueKnob").style.left = `${x * 100}%`;
+  $("tpSv").style.background = `hsl(${pickerHue}, 100%, 50%)`;
+  const [, s, v] = hexToHsv(draft.colors[activeStop]);
+  setActiveColor(hsvToHex(pickerHue, s || 1, v || 1));
+});
+
+$("tpFont").innerHTML = THEME_FONTS.map((f) => `<option value="${f}" style="font-family:'${f}'">${f}</option>`).join("");
+$("tpFont").onchange = () => { draft.font = $("tpFont").value; applyTheme(draft); };
+document.querySelectorAll("#tpMode button").forEach((b) => (b.onclick = () => { draft.mode = b.dataset.mode; syncThemeForm(); }));
+document.querySelectorAll("#tpIcons button").forEach((b) => (b.onclick = () => { draft.icons = b.dataset.icons; syncThemeForm(); }));
+$("tpIntensity").oninput = () => { draft.intensity = Number($("tpIntensity").value); $("tpIntensityLabel").textContent = `${draft.intensity}%`; applyTheme(draft); };
+$("tpAngle").oninput = () => { draft.angle = Number($("tpAngle").value); $("tpAngleLabel").textContent = `${draft.angle}°`; applyTheme(draft); };
+$("tpAddColor").onclick = () => {
+  if (draft.colors.length >= 4) return;
+  const [h] = hexToHsv(draft.colors[draft.colors.length - 1]);
+  draft.colors.push(hsvToHex((h + 40) % 360, 0.8, 0.9));
+  activeStop = draft.colors.length - 1;
+  syncThemeForm();
+};
+$("tpSurprise").onclick = () => {
+  const h = Math.random() * 360;
+  const n = 2 + Math.floor(Math.random() * 2);
+  draft.colors = Array.from({ length: n }, (_, i) => hsvToHex((h + i * (40 + Math.random() * 60)) % 360, 0.65 + Math.random() * 0.3, 0.75 + Math.random() * 0.25));
+  draft.intensity = 40 + Math.floor(Math.random() * 50);
+  draft.angle = Math.floor(Math.random() * 360);
+  activeStop = 0;
+  syncThemeForm();
+};
+$("tpReset").onclick = () => { draft = JSON.parse(JSON.stringify(DEFAULT_THEME)); activeStop = 0; syncThemeForm(); };
+$("themeBtn").onclick = () => ($("themePanel").classList.contains("open") ? closeThemePanel(false) : openThemePanel());
+$("themeClose").onclick = () => closeThemePanel(false);
+$("tpBack").onclick = () => closeThemePanel(false);
+$("tpApply").onclick = () => closeThemePanel(true);
+
 /* Init */
 (async function init() {
   settings = await api.getSettings();
+  theme = { ...DEFAULT_THEME, ...(settings.theme || {}) };
+  applyTheme(theme);
   bindSetting("version", "version");
   bindSetting("loader", "loader");
   bindSetting("ramMax", "ramMax");
