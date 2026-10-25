@@ -1,0 +1,46 @@
+{
+  "name": "fracture-launcher",
+  "productName": "Fracture Launcher",
+  "version": "1.0.0",
+  "description": "A lightweight Minecraft PvP launcher",
+  "main": "src/main.js",
+  "author": "DxTrenn",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis"
+  },
+  "dependencies": {
+    "extract-zip": "2.0.1",
+    "minecraft-launcher-core": "3.18.2",
+    "msmc": "5.0.5",
+    "qrcode": "1.5.4",
+    "yauzl": "2.10.0"
+  },
+  "devDependencies": {
+    "electron": "github:castlabs/electron-releases#v38.8.6+wvcus",
+    "electron-builder": "26.0.12"
+  },
+  "build": {
+    "appId": "com.fractur.launcher",
+    "productName": "Fracture Launcher",
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Fracture Launcher"
+    },
+    "electronVersion": "38.8.6+wvcus",
+    "electronDownload": {
+      "mirror": "https://github.com/castlabs/electron-releases/releases/download/v"
+    }
+  }
+}

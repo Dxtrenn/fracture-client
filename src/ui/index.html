@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https://mc-heads.net https://api.mcsrvstat.us https://cdn.modrinth.com http://textures.minecraft.net https://textures.minecraft.net; style-src 'self' 'unsafe-inline'; frame-src https://www.tiktok.com https://open.spotify.com https://accounts.spotify.com https://www.instagram.com https://mccapes.net https://skinmc.net https://namemc.com https://minecraftcapes.net" />
+  <title>Fracture Launcher</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute">
+    <defs>
+      <linearGradient id="fg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#ff3b4e" />
+        <stop offset="1" stop-color="#ff7a3b" />
+      </linearGradient>
+      <!-- Fractur mark: a shattered diamond split by a lightning crack -->
+      <symbol id="logo" viewBox="0 0 100 100">
+        <path d="M50 4 L92 50 L50 96 L8 50 Z" fill="none" stroke="currentColor" stroke-width="7" stroke-linejoin="round" />
+        <path d="M56 18 L38 52 L52 52 L42 82 L66 44 L52 44 L60 18 Z" fill="currentColor" />
+      </symbol>
+    </defs>
+  </svg>
+
+  <header class="topbar">
+    <div class="brand">
+      <img class="brand-logo" src="heart.png" alt="" />
+      FRACTURE LAUNCHER
+    </div>
+    <div class="top-right">
+      <nav class="tabs">
+        <button class="tab active" data-tab="play">▶ Play</button>
+        <button class="tab" data-tab="mods">▦ Mods</button>
+        <button class="tab" data-tab="capes">◭ Accessories</button>
+      </nav>
+      <button class="account-chip" id="accountChip">
+        <img id="chipHead" alt="" />
+        <div><small id="chipSub">Not signed in</small><b id="chipName">Guest User</b></div>
+      </button>
+      <button class="icon-btn" id="consoleBtn" title="Console">&gt;_</button>
+      <button class="icon-btn" id="settingsBtn" title="Settings">⚙</button>
+      <button class="icon-btn" data-win="min" title="Minimize">—</button>
+      <button class="icon-btn close" data-win="close" title="Close">✕</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="left">
+      <!-- PLAY -->
+      <section id="play" class="page active">
+        <div class="hero">
+          <div class="hero-art"></div>
+          <div class="crash hidden" id="crash">
+            <h1>GAME CRASHED</h1>
+            <p id="crashInfo"></p>
+            <div class="crash-actions">
+              <button class="fix-btn" id="fixBtn">FIX</button>
+              <button class="ghost" id="crashDismiss">Dismiss</button>
+            </div>
+            <button class="crash-details" id="crashDetails">View log</button>
+          </div>
+          <div class="hero-content" id="heroContent">
+            <p id="heroMsg">You're not logged in. Log in to start using Fracture.</p>
+            <div class="hero-actions">
+              <button id="playBtn" class="play">PLAY</button>
+              <button id="versionBtn" class="ghost">Change Version</button>
+            </div>
+            <div class="status">
+              <div id="statusText">Ready</div>
+              <div class="bar"><div id="bar"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom">
+          <div class="card">
+            <div class="card-head"><h3>LATEST NEWS FROM FRACTURE</h3></div>
+            <div class="news" id="news"></div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <h3>PVP SERVERS</h3>
+              <button class="pill" id="addServerBtn">ADD SERVER</button>
+            </div>
+            <div class="server-list" id="serverList"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- MODS -->
+      <section id="mods" class="page">
+        <div class="card full">
+          <div class="card-head">
+            <div class="mod-tabs">
+              <button class="mod-tab active" data-mtab="browse">BROWSE MODRINTH</button>
+              <button class="mod-tab" data-mtab="installed">INSTALLED</button>
+              <button class="mod-tab" data-mtab="import">IMPORT PROFILE</button>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span class="muted">Fabric · <b id="modsVersion"></b></span>
+              <button class="pill" id="openModsBtn">OPEN FOLDER</button>
+            </div>
+          </div>
+          <div id="mtab-browse" class="mtab active">
+            <input id="modSearch" class="mod-search" placeholder="Search Modrinth mods..." />
+            <div id="modResults" class="mod-results"></div>
+          </div>
+          <div id="mtab-installed" class="mtab">
+            <div id="modList" class="mod-list"></div>
+          </div>
+          <div id="mtab-import" class="mtab">
+            <div class="import-actions">
+              <button class="pill" id="importFileBtn">IMPORT .MRPACK / .ZIP</button>
+              <button class="pill" id="importFolderBtn">IMPORT FOLDER</button>
+              <button class="pill" id="rescanBtn">RESCAN</button>
+            </div>
+            <p class="muted" style="margin:10px 0">Profiles found from Dawn, Feather, Prism, Modrinth and Lunar on this PC. Mods, resource packs, shaders and settings are copied in.</p>
+            <div id="importList" class="mod-results"></div>
+          </div>
+          <div class="drop-zone hidden" id="dropZone">Drop .jar mods, resource pack .zips or a .mrpack here</div>
+        </div>
+      </section>
+
+      <!-- ACCESSORIES -->
+      <section id="capes" class="page">
+        <div class="card full">
+          <div class="card-head acc-head">
+            <div class="mod-tabs acc-tabs">
+              <span class="acc-group">SKINS</span>
+              <button class="acc-tab active" data-atab="skins">MY SKINS</button>
+              <button class="acc-tab" data-atab="skinmaker">SKIN CREATOR</button>
+              <button class="acc-tab" data-atab="skinfinder">SKIN FINDER</button>
+              <span class="acc-group">CAPES</span>
+              <button class="acc-tab" data-atab="capes">MY CAPES</button>
+              <button class="acc-tab" data-atab="capemaker">CAPE MAKER</button>
+              <button class="acc-tab" data-atab="capefinder">CAPE FINDER</button>
+              <button class="acc-tab" data-atab="shop">SHOP</button>
+            </div>
+          </div>
+
+          <div id="atab-skins" class="apane active">
+            <div class="lib-actions">
+              <button class="pill" id="importSkinBtn">IMPORT SKIN</button>
+              <span class="muted">Click a skin to wear it. Saved skins from Skin Creator and Skin Finder show up here.</span>
+            </div>
+            <div id="skinList" class="lib-grid"></div>
+          </div>
+
+          <div id="atab-skinmaker" class="apane web-pane" data-src="https://skinmc.net/skin-editor" data-part="persist:skins"
+               data-hint="Make a skin, then press Download in the editor and it lands in My Skins."></div>
+          <div id="atab-skinfinder" class="apane web-pane" data-src="https://namemc.com/minecraft-skins" data-part="persist:skins"
+               data-hint="Open any skin or player and press SAVE THIS SKIN, or right-click a skin image." data-save="skin"></div>
+
+          <div id="atab-capes" class="apane">
+            <div class="lib-actions">
+              <button class="pill" id="capesModBtn">INSTALL CAPES MOD</button>
+              <button class="pill" id="importCapeBtn">IMPORT CAPE</button>
+            </div>
+            <h3 class="lib-title">OFFICIAL CAPES</h3>
+            <p class="muted" style="margin-bottom:10px">Capes on your Minecraft account. Click one to wear it everywhere.</p>
+            <div id="capeList" class="cape-grid"></div>
+            <h3 class="lib-title">SAVED CAPES</h3>
+            <p class="muted" style="margin-bottom:10px">Capes from Cape Maker and Cape Finder. Upload one on minecraftcapes.net and the MinecraftCapes or Capes mod shows it in game.</p>
+            <div id="capeLib" class="lib-grid"></div>
+          </div>
+
+          <div id="atab-capemaker" class="apane web-pane" data-src="https://minecraftcapes.net/gallery/cape-creator" data-part="persist:capes"
+               data-hint="Design a cape, then download it and it lands in My Capes."></div>
+          <div id="atab-capefinder" class="apane web-pane" data-src="https://minecraftcapes.net/gallery" data-part="persist:capes"
+               data-hint="Right-click any cape image and choose Save to My Capes."></div>
+          <div id="atab-shop" class="apane web-pane" data-src="https://mccapes.net/" data-part="persist:mccapes"
+               data-hint="Official cape codes. Redeem them on minecraft.net, then wear them in My Capes."></div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="side">
+      <div class="side-tabs">
+        <button class="side-tab active" data-side="profile">Profile</button>
+        <button class="side-tab" data-side="tiktok">TikTok</button>
+        <button class="side-tab" data-side="spotify">Spotify</button>
+        <button class="side-tab" data-side="instagram">Instagram</button>
+      </div>
+      <div class="side-pane active" id="side-profile">
+        <div class="swoosh"></div>
+        <img class="side-logo" id="sideLogo" src="logo-full.png" alt="" />
+        <img id="skin" class="skin hidden" alt="" />
+        <div id="sideName" class="side-name"></div>
+      </div>
+      <div class="switcher" id="switcher">
+        <div class="sw-head"><h2>ACCOUNT SWITCHER</h2><button class="icon-btn close" id="swClose">✕</button></div>
+        <div class="sw-body">
+          <div id="swList" class="sw-list"></div>
+          <button class="ms-btn" id="swAdd"><span class="ms-logo"><i></i><i></i><i></i><i></i></span>+ Microsoft Account</button>
+          <button class="ms-btn" id="swAddLink"><span class="ms-logo"><i></i><i></i><i></i><i></i></span>+ Microsoft Account (via Link)</button>
+        </div>
+      </div>
+      <div class="side-pane web-side" id="side-spotify"></div>
+      <div class="side-pane web-side" id="side-instagram"></div>
+      <div class="side-pane" id="side-tiktok">
+        <div class="tt-hint">↑ ↓ scroll · Space pause</div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Modals -->
+  <div class="link-overlay hidden" id="linkOverlay">
+    <button class="icon-btn close link-close" id="linkClose">✕</button>
+    <h2>ADD MICROSOFT ACCOUNT VIA LINK</h2>
+    <div class="link-row">
+      <div class="link-qr"><img id="linkQr" alt="" /></div>
+      <button class="link-code" id="linkCode" title="Copy code"><span id="linkCodeText">········</span><span class="copy-ico">⧉</span></button>
+    </div>
+    <p class="link-text" id="linkText">Getting a code...</p>
+    <button class="link-open" id="linkOpen">Open Link and Copy</button>
+  </div>
+
+  <div class="modal hidden" id="settingsModal">
+    <div class="modal-box">
+      <div class="card-head"><h3>SETTINGS</h3><button class="icon-btn" data-close>✕</button></div>
+      <label>Memory: <b id="ramLabel"></b><input type="range" id="ramMax" min="2" max="16" step="1" /></label>
+      <label>Loader
+        <select id="loader">
+          <option value="fabric">Fabric (performance mods)</option>
+          <option value="vanilla">Vanilla</option>
+        </select>
+      </label>
+      <div class="grid">
+        <label>Width <input type="number" id="width" /></label>
+        <label>Height <input type="number" id="height" /></label>
+      </div>
+      <label class="check"><input type="checkbox" id="fullscreen" /> Launch fullscreen</label>
+      <label class="check"><input type="checkbox" id="pvpMods" /> Auto-install performance mods</label>
+      <label class="check"><input type="checkbox" id="closeOnLaunch" /> Hide launcher while playing</label>
+      <label>JVM arguments <input id="jvmArgs" /></label>
+      <button id="openFolder" class="pill">OPEN GAME FOLDER</button>
+    </div>
+  </div>
+
+  <div class="modal hidden" id="versionModal">
+    <div class="modal-box small">
+      <div class="card-head"><h3>CHANGE VERSION</h3><button class="icon-btn" data-close>✕</button></div>
+      <div class="quick-versions">
+        <button data-v="1.8.9">1.8.9</button>
+        <button data-v="1.21.4">1.21.4</button>
+        <button data-v="1.20.1">1.20.1</button>
+      </div>
+      <label>All releases <select id="version"></select></label>
+    </div>
+  </div>
+
+  <div class="modal hidden" id="serverModal">
+    <form class="modal-box small" id="addServer">
+      <div class="card-head"><h3>ADD SERVER</h3><button type="button" class="icon-btn" data-close>✕</button></div>
+      <label>Name <input id="srvName" required /></label>
+      <label>Address <input id="srvIp" placeholder="play.example.net" required /></label>
+      <button class="play">ADD</button>
+    </form>
+  </div>
+
+  <div class="modal hidden" id="consoleModal">
+    <div class="modal-box wide">
+      <div class="card-head"><h3>CONSOLE</h3><button class="icon-btn" data-close>✕</button></div>
+      <pre id="log"></pre>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
