@@ -10,7 +10,7 @@ const DEFAULT_SERVERS = [
 ];
 
 const NEWS = [
-  { title: "Fracture Launcher 1.0", body: "Microsoft login, auto Java, Fabric performance mods and one-click server joins.", tag: "NEW" },
+  { title: "Fracture Client 1.0", body: "Microsoft login, auto Java, Fabric performance mods and one-click server joins.", tag: "NEW" },
   { title: "TikTok in the side panel", body: "Log in once, scroll with ↑ ↓ and pause with Space without leaving the launcher." },
   { title: "Tuned for PvP", body: "G1GC flags and Sodium, Lithium and Entity Culling installed for you on modern versions." },
 ];

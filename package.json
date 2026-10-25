@@ -1,6 +1,6 @@
 {
-  "name": "fracture-launcher",
-  "productName": "Fracture Launcher",
+  "name": "fracture-client",
+  "productName": "Fracture Client",
   "version": "1.0.0",
   "description": "A lightweight Minecraft PvP launcher",
   "main": "src/main.js",
@@ -22,8 +22,8 @@
     "electron-builder": "26.0.12"
   },
   "build": {
-    "appId": "com.fractur.launcher",
-    "productName": "Fracture Launcher",
+    "appId": "com.fracture.client",
+    "productName": "Fracture Client",
     "files": [
       "src/**/*",
       "package.json"
@@ -36,7 +36,7 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "shortcutName": "Fracture Launcher"
+      "shortcutName": "Fracture Client"
     },
     "electronVersion": "38.8.6+wvcus",
     "electronDownload": {

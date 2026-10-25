@@ -40,7 +40,7 @@ function writeJson(file, data) {
 
 function getJson(url) {
   return new Promise((resolve, reject) => {
-    https.get(url, { headers: { "User-Agent": "FractureLauncher/1.0" } }, (res) => {
+    https.get(url, { headers: { "User-Agent": "FractureClient/1.0" } }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         return resolve(getJson(res.headers.location));
       }
@@ -56,7 +56,7 @@ function getJson(url) {
 
 function download(url, dest, onProgress) {
   return new Promise((resolve, reject) => {
-    https.get(url, { headers: { "User-Agent": "FractureLauncher/1.0" } }, (res) => {
+    https.get(url, { headers: { "User-Agent": "FractureClient/1.0" } }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         return resolve(download(res.headers.location, dest, onProgress));
       }
@@ -345,7 +345,7 @@ function addToLibrary(kind, buf, name, extra = {}) {
 }
 
 async function fetchImage(url) {
-  const res = await fetch(url, { headers: { "User-Agent": "FractureLauncher/1.0" } });
+  const res = await fetch(url, { headers: { "User-Agent": "FractureClient/1.0" } });
   if (!res.ok) throw new Error(`Download failed (${res.status})`);
   return Buffer.from(await res.arrayBuffer());
 }
@@ -954,7 +954,7 @@ function apiRequest(method, url, token, body) {
       method,
       headers: {
         Authorization: `Bearer ${token}`,
-        "User-Agent": "FractureLauncher/1.0",
+        "User-Agent": "FractureClient/1.0",
         ...(data ? { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(data) } : {}),
       },
     }, (res) => {

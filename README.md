@@ -1,4 +1,4 @@
-# Fracture Launcher
+# Fracture Client
 
 A Minecraft PvP launcher for Windows.
 
@@ -12,7 +12,7 @@ A Minecraft PvP launcher for Windows.
 
 ## Download
 
-Grab the latest `Fracture Launcher Setup.exe` from the [Releases](../../releases) page.
+Grab the latest `Fracture Client Setup.exe` from the [Releases](../../releases) page.
 Windows may show a SmartScreen warning because the installer isn't code-signed: click **More info → Run anyway**.
 
 ## Building from source
