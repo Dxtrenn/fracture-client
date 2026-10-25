@@ -97,8 +97,11 @@
     /* Terminal */
     .term {
       background: linear-gradient(180deg, #14141b, #101016); border: 1px solid var(--line); border-radius: 14px; overflow: hidden;
-      box-shadow: 0 30px 80px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.02) inset; transform: perspective(1200px) rotateY(-4deg) rotateX(2deg);
+      box-shadow: 0 30px 80px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.02) inset;
+      transform: perspective(1000px) rotateY(var(--ry, -4deg)) rotateX(var(--rx, 2deg)); transition: transform .5s cubic-bezier(.2,.8,.2,1), box-shadow .3s;
+      will-change: transform;
     }
+    .term.tilting { transition: transform .08s linear, box-shadow .3s; box-shadow: 0 40px 90px rgba(0,0,0,.6), 0 0 40px rgba(255,59,78,.12); }
     .term-bar { display: flex; align-items: center; gap: 8px; padding: 13px 16px; border-bottom: 1px solid var(--line); }
     .dot { width: 11px; height: 11px; border-radius: 50%; }
     .term-bar span { margin-left: 10px; font-family: var(--mono); font-size: 12px; color: var(--muted); }
@@ -108,7 +111,9 @@
     .cursor { display: inline-block; width: 8px; height: 16px; background: var(--accent); vertical-align: -2px; animation: blink 1s steps(1) infinite; }
     @keyframes blink { 50% { opacity: 0; } }
     .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 16px; }
-    .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px 10px; text-align: center; }
+    .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px 10px; text-align: center; cursor: default;
+      transition: transform .25s cubic-bezier(.2,.8,.2,1), border-color .25s, box-shadow .25s, background .25s; }
+    .stat:hover { transform: translateY(-8px); border-color: rgba(255,59,78,.55); background: var(--panel2); box-shadow: 0 16px 34px rgba(0,0,0,.45), 0 0 24px rgba(255,59,78,.15); }
     .stat b { display: block; font-size: 24px; font-weight: 700; letter-spacing: -.5px; }
     .stat b.red { color: var(--accent); }
     .stat small { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; }
@@ -153,9 +158,9 @@
 
     @media (max-width: 900px) {
       .hero { padding: 60px 0; }
+      .term { --ry: 0deg; --rx: 0deg; }
       .hero .wrap, .showcase, .showcase.rev { grid-template-columns: 1fr; gap: 36px; }
       .showcase.rev .text { order: 0; }
-      .term { transform: none; }
       .grid, .steps { grid-template-columns: 1fr; }
       .links { display: none; }
       h1 { letter-spacing: -1.5px; }
@@ -303,5 +308,24 @@
       <span>Not affiliated with Mojang Studios or Microsoft. Minecraft is a trademark of Mojang Studios.</span>
     </div>
   </footer>
+  <script>
+    // Terminal leans toward the mouse while it hovers the box
+    const term = document.querySelector(".term");
+    if (term && matchMedia("(hover: hover)").matches) {
+      term.addEventListener("mousemove", (e) => {
+        const r = term.getBoundingClientRect();
+        const x = (e.clientX - r.left) / r.width - 0.5;
+        const y = (e.clientY - r.top) / r.height - 0.5;
+        term.classList.add("tilting");
+        term.style.setProperty("--ry", (x * 16).toFixed(2) + "deg");
+        term.style.setProperty("--rx", (-y * 12).toFixed(2) + "deg");
+      });
+      term.addEventListener("mouseleave", () => {
+        term.classList.remove("tilting");
+        term.style.removeProperty("--ry");
+        term.style.removeProperty("--rx");
+      });
+    }
+  </script>
 </body>
 </html>
