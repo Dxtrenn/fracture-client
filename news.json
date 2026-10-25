@@ -1,10 +1,11 @@
 {
-  "updated": "2026-10-25T00:00:00.000Z",
+  "updated": "2026-10-25T16:45:31.798Z",
   "posts": [
     {
-      "title": "Fracture Client 1.0",
-      "body": "Microsoft login, auto Java, Fabric performance mods and one-click server joins.",
-      "tag": "NEW"
+      "title": "FRACTUR CLIENT LAUNCH!",
+      "body": "WELCOME TO THE FIRST LAUNCH\nWe hope you enjoy using our Minecraft client and that you can experience the same joy as when you used Feather.",
+      "tag": "NEW",
+      "tagColor": "#9e1f1f"
     },
     {
       "title": "TikTok in the side panel",
