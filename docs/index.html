@@ -1,0 +1,211 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Fracture Client â€“ Free Minecraft PvP Launcher for Windows</title>
+  <meta name="description" content="Fracture Client is a free Minecraft PvP launcher for Windows: Fabric performance mods, a Modrinth mod browser, one-click crash fixes, skins, capes, custom themes and multi-account Microsoft login." />
+  <meta name="keywords" content="Fracture Client, Minecraft launcher, Minecraft PvP client, Fabric launcher, Modrinth, Minecraft skins, Minecraft capes" />
+  <link rel="canonical" href="https://dxtrenn.github.io/fracture-client/" />
+  <link rel="icon" type="image/png" href="img/heart.png" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Fracture Client â€“ Free Minecraft PvP Launcher" />
+  <meta property="og:description" content="Fabric performance mods, Modrinth browser, crash auto-fix, skins, capes and custom themes. Free for Windows." />
+  <meta property="og:image" content="https://dxtrenn.github.io/fracture-client/img/themes.png" />
+  <meta property="og:url" content="https://dxtrenn.github.io/fracture-client/" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="theme-color" content="#ff3b4e" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Fracture Client",
+    "operatingSystem": "Windows 10, Windows 11",
+    "applicationCategory": "GameApplication",
+    "description": "A free Minecraft PvP launcher with Fabric performance mods, a Modrinth mod browser, crash auto-fix, skins, capes and custom themes.",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "downloadUrl": "https://github.com/Dxtrenn/fracture-client/releases/latest",
+    "image": "https://dxtrenn.github.io/fracture-client/img/themes.png",
+    "author": { "@type": "Person", "name": "DxTrenn" }
+  }
+  </script>
+  <style>
+    :root {
+      --bg: #07070a; --panel: #111116; --panel2: #18181f; --line: #22222c;
+      --text: #ececf1; --muted: #8b8b9a; --accent: #ff3b4e; --accent2: #ff7a3b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { background: var(--bg); color: var(--text); font-family: "Segoe UI", system-ui, -apple-system, sans-serif; line-height: 1.55; overflow-x: hidden; }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+
+    nav { position: sticky; top: 0; z-index: 10; background: rgba(7,7,10,.82); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+    nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 900; letter-spacing: .5px; }
+    .brand img { width: 30px; height: 30px; image-rendering: pixelated; }
+    .links { display: flex; gap: 22px; align-items: center; font-size: 14px; font-weight: 600; color: var(--muted); }
+    .links a:hover { color: var(--text); }
+
+    .btn {
+      display: inline-flex; align-items: center; gap: 10px; padding: 14px 26px; border-radius: 10px;
+      font-weight: 900; letter-spacing: 1.5px; color: #fff; background: linear-gradient(90deg, var(--accent), var(--accent2));
+      box-shadow: 0 10px 30px rgba(255,59,78,.3); transition: transform .15s, filter .15s;
+    }
+    .btn:hover { transform: translateY(-2px); filter: brightness(1.08); }
+    .btn.small { padding: 9px 16px; font-size: 13px; letter-spacing: 1px; box-shadow: none; }
+    .btn.ghost { background: var(--panel2); box-shadow: none; color: var(--text); }
+
+    header.hero { position: relative; padding: 80px 0 60px; text-align: center; overflow: hidden; }
+    header.hero::before {
+      content: ""; position: absolute; inset: -200px -100px auto; height: 700px; z-index: -1;
+      background: radial-gradient(ellipse at 30% 30%, rgba(255,59,78,.28), transparent 55%), radial-gradient(ellipse at 75% 40%, rgba(120,60,255,.18), transparent 55%);
+    }
+    .hero-logo { width: 220px; margin: 0 auto 18px; border-radius: 18px; image-rendering: pixelated; filter: drop-shadow(0 20px 40px rgba(255,59,78,.35)); }
+    h1 { font-size: clamp(36px, 7vw, 68px); font-weight: 900; letter-spacing: 2px; line-height: 1.05; }
+    h1 span { background: linear-gradient(90deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .tagline { color: var(--muted); font-size: 18px; max-width: 620px; margin: 18px auto 30px; }
+    .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .note { margin-top: 14px; font-size: 13px; color: var(--muted); }
+    .shot { margin: 56px auto 0; max-width: 1000px; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); box-shadow: 0 40px 80px rgba(0,0,0,.6); }
+
+    section { padding: 70px 0; }
+    h2 { font-size: clamp(26px, 4vw, 38px); font-weight: 900; text-align: center; margin-bottom: 10px; }
+    .sub { text-align: center; color: var(--muted); margin-bottom: 40px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
+    .feat { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 22px; }
+    .feat .ico { font-size: 26px; margin-bottom: 10px; }
+    .feat h3 { font-size: 17px; margin-bottom: 6px; }
+    .feat p { color: var(--muted); font-size: 14px; }
+
+    .showcase { display: grid; grid-template-columns: 1fr 1.4fr; gap: 40px; align-items: center; margin-bottom: 70px; }
+    .showcase:nth-child(even) { grid-template-columns: 1.4fr 1fr; }
+    .showcase:nth-child(even) .text { order: 2; }
+    .showcase .text h3 { font-size: 28px; font-weight: 900; margin-bottom: 10px; }
+    .showcase .text p { color: var(--muted); }
+    .showcase img { border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 30px 60px rgba(0,0,0,.5); }
+
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; counter-reset: s; }
+    .step { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 22px; counter-increment: s; }
+    .step::before { content: counter(s); display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; background: var(--accent); font-weight: 900; margin-bottom: 12px; }
+    .step p { color: var(--muted); font-size: 14px; }
+
+    details { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; margin-bottom: 10px; }
+    summary { cursor: pointer; font-weight: 700; }
+    details p { color: var(--muted); margin-top: 10px; font-size: 15px; }
+
+    .final { text-align: center; background: linear-gradient(135deg, #2a0f15, #14101e); border: 1px solid var(--line); border-radius: 18px; padding: 50px 20px; }
+    footer { border-top: 1px solid var(--line); padding: 30px 0; color: var(--muted); font-size: 13px; }
+    footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+
+    @media (max-width: 760px) {
+      .links a:not(.btn) { display: none; }
+      .showcase, .showcase:nth-child(even) { grid-template-columns: 1fr; gap: 18px; }
+      .showcase:nth-child(even) .text { order: 0; }
+      header.hero { padding-top: 50px; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="wrap">
+      <a class="brand" href="#"><img src="img/heart.png" alt="" /> FRACTURE CLIENT</a>
+      <div class="links">
+        <a href="#features">Features</a>
+        <a href="#install">Install</a>
+        <a href="#faq">FAQ</a>
+        <a href="https://github.com/Dxtrenn/fracture-client">GitHub</a>
+        <a class="btn small" href="https://github.com/Dxtrenn/fracture-client/releases/latest">DOWNLOAD</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="wrap">
+      <img class="hero-logo" src="img/logo.png" alt="Fracture Client logo" />
+      <h1>The Minecraft<br /><span>PvP launcher</span></h1>
+      <p class="tagline">Fast Fabric launches, a built-in Modrinth mod browser, one-click crash fixes, skins, capes and themes you design yourself. Free for Windows.</p>
+      <div class="cta">
+        <a class="btn" href="https://github.com/Dxtrenn/fracture-client/releases/latest">â¬‡ DOWNLOAD FOR WINDOWS</a>
+        <a class="btn ghost" href="#features">See features</a>
+      </div>
+      <p class="note">Windows 10 / 11 Â· 64-bit Â· Free</p>
+      <div class="shot"><img src="img/themes.png" alt="Fracture Client launcher with a custom purple and red gradient theme" width="1260" height="800" /></div>
+    </div>
+  </header>
+
+  <section id="features">
+    <div class="wrap">
+      <h2>Everything in one launcher</h2>
+      <p class="sub">No juggling five apps to play with your mods.</p>
+      <div class="grid">
+        <div class="feat"><div class="ico">âš¡</div><h3>Tuned for PvP</h3><p>Fabric with Sodium, Lithium, Entity Culling and tuned Java flags installed for you. Java is downloaded automatically for every version.</p></div>
+        <div class="feat"><div class="ico">ðŸ§©</div><h3>Modrinth mod browser</h3><p>Search and install mods (and their dependencies) in one click, or drag .jar files straight in. Every mod shows its real icon.</p></div>
+        <div class="feat"><div class="ico">ðŸ› </div><h3>Crash auto-fix</h3><p>Missing or broken mods? Instead of a wall of errors you get one red FIX button that installs, updates or turns off the right mods.</p></div>
+        <div class="feat"><div class="ico">ðŸ“¦</div><h3>Import your profiles</h3><p>Bring your mods, resource packs, shaders and settings over from Dawn, Feather, Prism, Modrinth App and Lunar.</p></div>
+        <div class="feat"><div class="ico">ðŸ‘•</div><h3>Skins &amp; capes</h3><p>A skin library you can name and wear in one click, a skin creator, a NameMC skin finder, and your official capes.</p></div>
+        <div class="feat"><div class="ico">ðŸŽ¨</div><h3>Custom themes</h3><p>Gradient color themes with up to four colors, light or dark mode, fonts and icon styles. Make it look like yours.</p></div>
+        <div class="feat"><div class="ico">ðŸ‘¥</div><h3>Multiple accounts</h3><p>Microsoft login with an account switcher. Sign in with a popup, or with a code and QR on microsoft.com/link.</p></div>
+        <div class="feat"><div class="ico">ðŸŽµ</div><h3>Side panel apps</h3><p>TikTok, Spotify and Instagram right next to the play button, with their own saved logins.</p></div>
+        <div class="feat"><div class="ico">âš”</div><h3>One-click servers</h3><p>Live player counts for popular PvP servers and your own list. Click a server to launch straight into it.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="showcase">
+        <div class="text"><h3>Mods with faces</h3><p>Your mods show up as cards with their icons, authors and an on/off switch, just like you'd expect. Browse Modrinth without leaving the launcher.</p></div>
+        <img src="img/mods.png" alt="Installed mods list with icons and on/off switches" loading="lazy" width="1260" height="800" />
+      </div>
+      <div class="showcase">
+        <div class="text"><h3>Crashes, fixed</h3><p>When a mod is missing a dependency or doesn't belong, Fracture tells you in plain words and fixes it with one button.</p></div>
+        <img src="img/crash.png" alt="Game crashed screen with a red FIX button" loading="lazy" width="1260" height="800" />
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <h2>Install in a minute</h2>
+      <p class="sub">Three steps and you're in game.</p>
+      <div class="steps">
+        <div class="step"><h3>Download</h3><p>Grab <b>Fracture Client Setup.exe</b> from the latest release on GitHub.</p></div>
+        <div class="step"><h3>Run the installer</h3><p>If Windows shows "Windows protected your PC", click <b>More info â†’ Run anyway</b>. The installer isn't code-signed yet.</p></div>
+        <div class="step"><h3>Log in &amp; play</h3><p>Sign in with your Microsoft account, pick a version and hit <b>PLAY</b>.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap" style="max-width: 800px">
+      <h2>FAQ</h2>
+      <p class="sub">Quick answers.</p>
+      <details><summary>Is Fracture Client free?</summary><p>Yes, completely free.</p></details>
+      <details><summary>Do I need to own Minecraft?</summary><p>Yes. You log in with the Microsoft account that owns Minecraft Java Edition, the same as the official launcher.</p></details>
+      <details><summary>Is it safe? Why does Windows warn me?</summary><p>The full source code is public on GitHub. Windows warns about any app that isn't signed with a paid certificate; click More info â†’ Run anyway.</p></details>
+      <details><summary>Will it mess up my normal .minecraft folder?</summary><p>No. Fracture keeps its own game folder, so your other launchers stay exactly as they are.</p></details>
+      <details><summary>Which versions does it support?</summary><p>Every Minecraft Java release, Vanilla or Fabric, from 1.8.9 to the newest version.</p></details>
+      <details><summary>Does it work on Mac or Linux?</summary><p>Not yet. Fracture Client is Windows only for now.</p></details>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="final">
+        <h2>Ready to play?</h2>
+        <p class="sub" style="margin-bottom: 24px">Free, fast and yours to customize.</p>
+        <a class="btn" href="https://github.com/Dxtrenn/fracture-client/releases/latest">â¬‡ DOWNLOAD FRACTURE CLIENT</a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <span>Â© 2026 Fracture Client by DxTrenn</span>
+      <span>Not affiliated with Mojang Studios or Microsoft. Minecraft is a trademark of Mojang Studios.</span>
+    </div>
+  </footer>
+</body>
+</html>

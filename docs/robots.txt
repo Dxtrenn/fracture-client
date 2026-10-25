@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://dxtrenn.github.io/fracture-client/sitemap.xml
