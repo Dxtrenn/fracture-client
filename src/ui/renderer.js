@@ -52,7 +52,6 @@ document.querySelectorAll(".modal").forEach((m) => {
 });
 $("settingsBtn").onclick = () => openModal("settingsModal");
 $("consoleBtn").onclick = () => openModal("consoleModal");
-$("versionBtn").onclick = () => openModal("versionModal");
 $("addServerBtn").onclick = () => openModal("serverModal");
 
 /* Status */
@@ -73,7 +72,7 @@ function updateHero() {
     $("heroMsg").textContent = "You're not logged in. Log in to start using Fracture.";
     $("playBtn").textContent = "LOG IN";
   } else {
-    $("heroMsg").textContent = `Minecraft ${settings.version} · ${settings.loader === "fabric" ? "Fabric" : "Vanilla"}`;
+    $("heroMsg").textContent = `Minecraft ${prof().version} · ${prof().loader === "fabric" ? "Fabric" : "Vanilla"}`;
     $("playBtn").textContent = running ? "RUNNING" : "PLAY";
   }
   $("playBtn").disabled = running;
@@ -296,10 +295,10 @@ $("addServer").addEventListener("submit", (e) => {
 
 /* Mods */
 async function renderMods() {
-  $("modsVersion").textContent = settings.version;
-  const list = await api.listMods(settings.version);
+  $("modsVersion").textContent = `${prof().name} (${prof().version})`;
+  const list = await api.listMods(prof().id);
   const wrap = $("modList");
-  wrap.innerHTML = list.length ? "" : `<p class="muted">No mods yet for ${settings.version}. Install some from Modrinth or launch once on Fabric to get the performance pack.</p>`;
+  wrap.innerHTML = list.length ? "" : `<p class="muted">No mods in ${prof().name} yet. Install some from Modrinth or launch once on Fabric to get the performance pack.</p>`;
   for (const m of list) {
     const el = document.createElement("div");
     el.className = `mod${m.enabled ? "" : " off"}`;
@@ -309,18 +308,18 @@ async function renderMods() {
     el.querySelector("b").textContent = m.name;
     el.querySelector("small").textContent = m.authors.join(", ");
     el.querySelector(".switch").onclick = async () => {
-      await api.toggleMod(settings.version, m.file);
+      await api.toggleMod(prof().id, m.file);
       renderMods();
     };
     el.querySelector(".del").onclick = async () => {
       if (!confirm(`Delete ${m.name}?`)) return;
-      await api.deleteMod(settings.version, m.file);
+      await api.deleteMod(prof().id, m.file);
       renderMods();
     };
     wrap.appendChild(el);
   }
 }
-$("openModsBtn").onclick = () => api.openMods(settings.version);
+$("openModsBtn").onclick = () => api.openMods(prof().id);
 
 document.querySelectorAll(".mod-tab").forEach((t) =>
   t.addEventListener("click", () => {
@@ -340,18 +339,18 @@ let searchToken = 0;
 async function searchMods() {
   const token = ++searchToken;
   const wrap = $("modResults");
-  $("modsVersion").textContent = settings.version;
+  $("modsVersion").textContent = `${prof().name} (${prof().version})`;
   wrap.innerHTML = `<p class="muted">Searching...</p>`;
   let hits;
   try {
-    hits = await api.searchModrinth($("modSearch").value.trim(), settings.version);
+    hits = await api.searchModrinth($("modSearch").value.trim(), prof().version);
   } catch (e) {
     wrap.innerHTML = `<p class="muted">Couldn't reach Modrinth: ${cleanError(e)}</p>`;
     return;
   }
   if (token !== searchToken) return;
-  const installed = (await api.listMods(settings.version)).map((m) => m.fileName.toLowerCase());
-  wrap.innerHTML = hits.length ? "" : `<p class="muted">No Fabric mods found for ${settings.version}.</p>`;
+  const installed = (await api.listMods(prof().id)).map((m) => m.fileName.toLowerCase());
+  wrap.innerHTML = hits.length ? "" : `<p class="muted">No Fabric mods found for ${prof().version}.</p>`;
   for (const h of hits) {
     const el = document.createElement("div");
     el.className = "mr";
@@ -370,7 +369,7 @@ async function searchMods() {
       btn.disabled = true;
       btn.textContent = "...";
       try {
-        await api.installModrinth(h.id, settings.version);
+        await api.installModrinth(h.id, prof().id);
         btn.textContent = "INSTALLED";
       } catch (e) {
         btn.textContent = "FAILED";
@@ -395,8 +394,8 @@ modsPage.addEventListener("drop", async (e) => {
   const files = [...e.dataTransfer.files].map((f) => api.pathForFile(f)).filter(Boolean);
   if (!files.length) return;
   try {
-    const r = await api.addFiles(settings.version, files);
-    setStatus(`Added ${r.mods} mod(s) and ${r.packs} resource pack(s) to ${settings.version}`);
+    const r = await api.addFiles(prof().id, files);
+    setStatus(`Added ${r.mods} mod(s) and ${r.packs} resource pack(s) to ${prof().name}`);
   } catch (err) {
     setStatus(`Error: ${cleanError(err)}`);
   }
@@ -408,16 +407,10 @@ function versionOptions(selected) {
   return [...$("version").options].map((o) => `<option${o.value === selected ? " selected" : ""}>${o.value}</option>`).join("");
 }
 
-function afterImport(r) {
+async function afterImport(r) {
   if (!r) return;
-  if (r.version) {
-    settings.version = r.version;
-    settings.loader = "fabric";
-    $("version").value = r.version;
-    $("loader").value = "fabric";
-    saveSettings();
-  }
-  setStatus(`Imported ${r.mods || 0} mods, ${r.resourcepacks || 0} resource packs into ${r.version}`);
+  if (r.profileId) await switchProfile(r.profileId);
+  setStatus(`Imported ${r.mods || 0} mods, ${r.resourcepacks || 0} resource packs into the new profile "${r.name}"`);
   document.querySelector('[data-mtab="installed"]').click();
 }
 
@@ -434,15 +427,15 @@ async function renderImports() {
     el.querySelector("b").textContent = p.name;
     el.querySelector("p").textContent = `${p.mods} mods${p.modsOnly ? "" : " · resource packs · shaders · settings"}`;
     const sel = el.querySelector("select");
-    sel.innerHTML = versionOptions(p.version || settings.version);
+    sel.innerHTML = versionOptions(p.version || prof().version);
     const btn = el.querySelector(".install");
     btn.onclick = async () => {
       btn.disabled = true;
       btn.textContent = "...";
       try {
-        const r = await api.runImport(p.gameDir, sel.value, !!p.modsOnly);
+        const r = await api.runImport(p.gameDir, sel.value, !!p.modsOnly, `${p.source} ${p.name}`);
         btn.textContent = "DONE";
-        afterImport({ ...r, version: sel.value });
+        afterImport(r);
       } catch (e) {
         btn.textContent = "FAILED";
         btn.title = cleanError(e);
@@ -455,10 +448,10 @@ async function renderImports() {
 
 $("rescanBtn").onclick = renderImports;
 $("importFileBtn").onclick = async () => {
-  try { afterImport(await api.importFile(settings.version)); } catch (e) { setStatus(`Error: ${cleanError(e)}`); }
+  try { afterImport(await api.importFile(prof().id)); } catch (e) { setStatus(`Error: ${cleanError(e)}`); }
 };
 $("importFolderBtn").onclick = async () => {
-  try { afterImport(await api.importFolder(settings.version)); } catch (e) { setStatus(`Error: ${cleanError(e)}`); }
+  try { afterImport(await api.importFolder(prof().id)); } catch (e) { setStatus(`Error: ${cleanError(e)}`); }
 };
 
 /* Accessories */
@@ -684,8 +677,8 @@ $("capesModBtn").onclick = async () => {
   btn.disabled = true;
   btn.textContent = "INSTALLING...";
   try {
-    await api.installModrinth("capes", settings.version);
-    btn.textContent = `CAPES MOD INSTALLED (${settings.version})`;
+    await api.installModrinth("capes", prof().id);
+    btn.textContent = `CAPES MOD INSTALLED (${prof().name})`;
   } catch (e) {
     btn.textContent = "INSTALL CAPES MOD";
     btn.disabled = false;
@@ -712,19 +705,91 @@ function bindSetting(id, key, type = "value") {
 
 function saveSettings() {
   $("ramLabel").textContent = `${settings.ramMax} GB`;
-  document.querySelectorAll(".quick-versions button").forEach((b) => b.classList.toggle("active", b.dataset.v === settings.version));
   updateHero();
   api.setSettings(settings);
 }
 
-document.querySelectorAll(".quick-versions button").forEach((b) =>
-  b.addEventListener("click", () => {
-    settings.version = b.dataset.v;
-    $("version").value = b.dataset.v;
-    saveSettings();
-    $("versionModal").classList.add("hidden");
-  })
-);
+/* Profiles */
+let profiles = { active: null, list: [] };
+
+function prof() {
+  return profiles.list.find((p) => p.id === profiles.active) || profiles.list[0] || { id: "1.21.4", name: "1.21.4 Fabric", version: "1.21.4", loader: "fabric" };
+}
+
+async function loadProfiles() {
+  profiles = await api.listProfiles();
+  $("profileBtnName").textContent = prof().name;
+  $("profileBtnSub").textContent = `${prof().version} · ${prof().loader === "fabric" ? "Fabric" : "Vanilla"}`;
+  updateHero();
+}
+
+async function switchProfile(id) {
+  await api.selectProfile(id);
+  await loadProfiles();
+  if ($("mods").classList.contains("active")) {
+    if ($("mtab-installed").classList.contains("active")) renderMods();
+    else if ($("mtab-browse").classList.contains("active")) searchMods();
+  }
+}
+
+let editingProfile = null; // null = list view, {} = new, profile = edit
+
+function renderProfiles() {
+  const wrap = $("profileList");
+  $("profileEditor").classList.toggle("hidden", !editingProfile);
+  wrap.classList.toggle("hidden", !!editingProfile);
+  $("newProfileBtn").classList.toggle("hidden", !!editingProfile);
+  if (editingProfile) return;
+  wrap.innerHTML = "";
+  for (const p of profiles.list) {
+    const el = document.createElement("div");
+    el.className = `profile${p.id === profiles.active ? " active" : ""}`;
+    el.innerHTML = `<div class="p-ico"></div><div class="p-info"><b></b><small></small></div><div class="p-acts"><button data-act="edit" title="Edit">✎</button><button data-act="dup" title="Duplicate">⧉</button><button data-act="open" title="Open folder">📁</button><button data-act="del" title="Delete">🗑</button></div>`;
+    el.querySelector(".p-ico").textContent = (p.name.match(/[a-z0-9]/i) || ["?"])[0].toUpperCase();
+    el.querySelector("b").textContent = p.name;
+    el.querySelector("small").textContent = `Minecraft ${p.version} · ${p.loader === "fabric" ? "Fabric" : "Vanilla"}${p.id === profiles.active ? " · Selected" : ""}`;
+    el.onclick = async (e) => {
+      const act = e.target.dataset && e.target.dataset.act;
+      if (act === "edit") { editingProfile = p; fillProfileForm(p); return renderProfiles(); }
+      if (act === "dup") { await api.duplicateProfile(p.id); await loadProfiles(); setStatus(`Duplicated ${p.name}`); return renderProfiles(); }
+      if (act === "open") return api.openProfile(p.id);
+      if (act === "del") {
+        if (!confirm(`Delete the profile "${p.name}"? Its folder (mods, worlds, screenshots) goes to the Recycle Bin.`)) return;
+        try { await api.deleteProfile(p.id); } catch (err) { return setStatus(`Error: ${cleanError(err)}`); }
+        await loadProfiles();
+        return renderProfiles();
+      }
+      await switchProfile(p.id);
+      renderProfiles();
+      $("versionModal").classList.add("hidden");
+      setStatus(`Switched to ${p.name}`);
+    };
+    wrap.appendChild(el);
+  }
+}
+
+function fillProfileForm(p) {
+  $("profName").value = p.name || "";
+  $("version").value = p.version || prof().version;
+  $("profLoader").value = p.loader || "fabric";
+  $("profTitle").textContent = p.id ? "EDIT PROFILE" : "NEW PROFILE";
+}
+
+$("profileBtn").onclick = () => { editingProfile = null; renderProfiles(); openModal("versionModal"); };
+$("newProfileBtn").onclick = () => { editingProfile = {}; fillProfileForm({ name: "", version: prof().version, loader: "fabric" }); renderProfiles(); $("profName").focus(); };
+$("profCancel").onclick = () => { editingProfile = null; renderProfiles(); };
+$("profSave").onclick = async () => {
+  const data = { name: $("profName").value.trim(), version: $("version").value, loader: $("profLoader").value };
+  try {
+    if (editingProfile.id) await api.updateProfile(editingProfile.id, data);
+    else await switchProfile((await api.createProfile(data)).id);
+  } catch (e) {
+    return setStatus(`Error: ${cleanError(e)}`);
+  }
+  editingProfile = null;
+  await loadProfiles();
+  renderProfiles();
+};
 $("openFolder").onclick = () => api.openFolder();
 
 /* Launch */
@@ -1033,8 +1098,7 @@ $("tpApply").onclick = () => closeThemePanel(true);
   settings = await api.getSettings();
   theme = { ...DEFAULT_THEME, ...(settings.theme || {}) };
   applyTheme(theme);
-  bindSetting("version", "version");
-  bindSetting("loader", "loader");
+  await loadProfiles();
   bindSetting("ramMax", "ramMax");
   bindSetting("width", "width");
   bindSetting("height", "height");
@@ -1048,7 +1112,7 @@ $("tpApply").onclick = () => closeThemePanel(true);
   renderAccount();
 
   const sel = $("version");
-  sel.innerHTML = `<option>${settings.version}</option>`;
+  sel.innerHTML = `<option>${prof().version}</option>`;
   try {
     const versions = await api.versions();
     sel.innerHTML = "";
@@ -1057,7 +1121,7 @@ $("tpApply").onclick = () => closeThemePanel(true);
       o.value = o.textContent = v;
       sel.appendChild(o);
     }
-    sel.value = settings.version;
+    sel.value = prof().version;
   } catch {
     setStatus("Offline: couldn't load version list");
   }

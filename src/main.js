@@ -31,6 +31,64 @@ const DEFAULT_SETTINGS = {
 
 let win;
 
+/* Profiles: each one is a named setup (version + loader) with its own game folder in instances/<id> */
+
+const PROFILES_FILE = path.join(ROOT, "profiles.json");
+const MC_VERSION_RE = /^(1\.\d+(\.\d+)?|2\d\.\d+(\.\d+)?)$/;
+
+function loadProfiles() {
+  const data = readJson(PROFILES_FILE, null);
+  if (data && Array.isArray(data.list) && data.list.length) return data;
+  // First run with profiles: every existing per-version folder becomes a profile with the same id
+  const s = { ...DEFAULT_SETTINGS, ...readJson(SETTINGS_FILE, {}) };
+  const instances = path.join(ROOT, "instances");
+  let dirs = [];
+  try { dirs = fs.readdirSync(instances).filter((d) => MC_VERSION_RE.test(d) && fs.statSync(path.join(instances, d)).isDirectory()); } catch {}
+  if (!dirs.includes(s.version)) dirs.unshift(s.version);
+  const list = dirs.map((v) => ({ id: v, name: `${v} ${s.loader === "fabric" ? "Fabric" : "Vanilla"}`, version: v, loader: s.loader, created: Date.now() }));
+  const migrated = { active: s.version, list };
+  writeJson(PROFILES_FILE, migrated);
+  return migrated;
+}
+function saveProfiles(data) { writeJson(PROFILES_FILE, data); }
+
+function profileById(id) {
+  return loadProfiles().list.find((p) => p.id === id) || null;
+}
+function activeProfile() {
+  const data = loadProfiles();
+  return data.list.find((p) => p.id === data.active) || data.list[0];
+}
+// Minecraft version for a profile id (older code paths passed a bare version as the id)
+function mcVersionOf(id) {
+  const p = profileById(id);
+  return p ? p.version : id;
+}
+
+function newProfileId(name) {
+  const base = String(name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 24) || "profile";
+  const taken = new Set(loadProfiles().list.map((p) => p.id));
+  let id = base;
+  for (let i = 2; taken.has(id) || MC_VERSION_RE.test(id); i++) id = `${base}-${i}`;
+  return id;
+}
+
+function createProfile({ name, version, loader }) {
+  if (!MC_VERSION_RE.test(String(version))) throw new Error("Pick a Minecraft version");
+  const data = loadProfiles();
+  const profile = {
+    id: newProfileId(name || version),
+    name: String(name || `${version} ${loader === "vanilla" ? "Vanilla" : "Fabric"}`).slice(0, 32),
+    version,
+    loader: loader === "vanilla" ? "vanilla" : "fabric",
+    created: Date.now(),
+  };
+  data.list.push(profile);
+  saveProfiles(data);
+  fs.mkdirSync(path.join(ROOT, "instances", profile.id, "mods"), { recursive: true });
+  return profile;
+}
+
 function readJson(file, fallback) {
   try { return JSON.parse(fs.readFileSync(file, "utf8")); } catch { return fallback; }
 }
@@ -206,7 +264,7 @@ async function findModrinthProject(modId, version) {
       if (p && p.id) return p.id;
     } catch {}
   }
-  const facets = encodeURIComponent(JSON.stringify([["categories:fabric"], [`versions:${version}`], ["project_type:mod"]]));
+  const facets = encodeURIComponent(JSON.stringify([["categories:fabric"], [`versions:${mcVersionOf(version)}`], ["project_type:mod"]]));
   const r = await getJson(`https://api.modrinth.com/v2/search?query=${encodeURIComponent(modId.replace(/[_-]/g, " "))}&facets=${facets}&limit=1`);
   if (r.hits && r.hits[0]) return r.hits[0].project_id;
   throw new Error(`Couldn't find ${modId} on Modrinth`);
@@ -500,6 +558,55 @@ ipcMain.handle("window", (_e, action) => {
 ipcMain.handle("settings:get", () => ({ ...DEFAULT_SETTINGS, ...readJson(SETTINGS_FILE, {}) }));
 ipcMain.handle("settings:set", (_e, s) => { writeJson(SETTINGS_FILE, s); return true; });
 
+ipcMain.handle("profiles:list", () => loadProfiles());
+
+ipcMain.handle("profiles:create", (_e, opts) => createProfile(opts || {}));
+
+ipcMain.handle("profiles:update", (_e, id, changes) => {
+  const data = loadProfiles();
+  const p = data.list.find((x) => x.id === id);
+  if (!p) throw new Error("Profile not found");
+  if (typeof changes.name === "string" && changes.name.trim()) p.name = changes.name.trim().slice(0, 32);
+  if (MC_VERSION_RE.test(String(changes.version || ""))) p.version = changes.version;
+  if (changes.loader === "fabric" || changes.loader === "vanilla") p.loader = changes.loader;
+  saveProfiles(data);
+  return p;
+});
+
+ipcMain.handle("profiles:select", (_e, id) => {
+  const data = loadProfiles();
+  if (data.list.some((p) => p.id === id)) data.active = id;
+  saveProfiles(data);
+  return true;
+});
+
+// Copies mods, packs and settings into a brand-new profile
+ipcMain.handle("profiles:duplicate", (_e, id) => {
+  const src = profileById(id);
+  if (!src) throw new Error("Profile not found");
+  const copy = createProfile({ name: `${src.name} copy`, version: src.version, loader: src.loader });
+  const from = path.join(ROOT, "instances", src.id);
+  for (const sub of ["mods", "resourcepacks", "shaderpacks", "config"]) copyDir(path.join(from, sub), path.join(ROOT, "instances", copy.id, sub));
+  for (const f of ["options.txt", "optionsshaders.txt", "servers.dat"]) {
+    if (fs.existsSync(path.join(from, f))) fs.copyFileSync(path.join(from, f), path.join(ROOT, "instances", copy.id, f));
+  }
+  return copy;
+});
+
+ipcMain.handle("profiles:delete", (_e, id) => {
+  const data = loadProfiles();
+  if (data.list.length <= 1) throw new Error("You need at least one profile");
+  data.list = data.list.filter((p) => p.id !== id);
+  if (data.active === id) data.active = data.list[0].id;
+  saveProfiles(data);
+  // Worlds and screenshots live in the folder too, so it goes to the Recycle Bin rather than being erased
+  const dir = path.join(ROOT, "instances", path.basename(id));
+  if (fs.existsSync(dir)) shell.trashItem(dir).catch(() => {});
+  return true;
+});
+
+ipcMain.handle("profiles:open", (_e, id) => shell.openPath(instanceDir(id)));
+
 ipcMain.handle("versions", async () => {
   const manifest = await getJson("https://piston-meta.mojang.com/mc/game/version_manifest_v2.json");
   return manifest.versions.filter((v) => v.type === "release").map((v) => v.id);
@@ -737,9 +844,9 @@ async function installModrinth(projectId, version, seen = new Set()) {
   seen.add(projectId);
   const dir = modsDir(version);
   const manifestPath = path.join(dir, ".fractur-mods.json");
-  const q = encodeURIComponent(JSON.stringify([version]));
+  const q = encodeURIComponent(JSON.stringify([mcVersionOf(version)]));
   const versions = await getJson(`https://api.modrinth.com/v2/project/${projectId}/version?loaders=%5B%22fabric%22%5D&game_versions=${q}`);
-  if (!versions.length) throw new Error(`No Fabric build for ${version}`);
+  if (!versions.length) throw new Error(`No Fabric build for ${mcVersionOf(version)}`);
   const v = versions[0];
   const file = v.files.find((f) => f.primary) || v.files[0];
   const manifest = readJson(manifestPath, {});
@@ -888,7 +995,10 @@ function importGameDir(gameDir, version, modsOnly) {
   return result;
 }
 
-ipcMain.handle("import:run", (_e, gameDir, version, modsOnly) => importGameDir(gameDir, version, modsOnly));
+ipcMain.handle("import:run", (_e, gameDir, version, modsOnly, name) => {
+  const profile = createProfile({ name: name || `Imported ${version}`, version, loader: "fabric" });
+  return { profileId: profile.id, version, name: profile.name, ...importGameDir(gameDir, profile.id, modsOnly) };
+});
 
 // Finds the folder inside an extracted export that actually holds the game files
 function findGameDir(dir, depth = 0) {
@@ -901,7 +1011,10 @@ function findGameDir(dir, depth = 0) {
   return null;
 }
 
-async function importArchive(file, fallbackVersion) {
+// Imported packs and folders always become a new profile, so they never mix with an existing setup
+async function importArchive(file, fallbackProfileId) {
+  const fallbackVersion = mcVersionOf(fallbackProfileId || activeProfile().id);
+  const fileName = path.basename(file).replace(/.(mrpack|zip)$/i, "");
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "fracture-import-"));
   try {
     await extract(file, { dir: tmp });
@@ -909,7 +1022,8 @@ async function importArchive(file, fallbackVersion) {
     if (index) {
       // Modrinth pack: files are listed with download URLs, extras live in overrides/
       const version = (index.dependencies && index.dependencies.minecraft) || fallbackVersion;
-      const target = instanceDir(version);
+      const profile = createProfile({ name: index.name || fileName, version, loader: "fabric" });
+      const target = instanceDir(profile.id);
       let done = 0;
       for (const f of index.files || []) {
         if (f.env && f.env.client === "unsupported") continue;
@@ -922,7 +1036,7 @@ async function importArchive(file, fallbackVersion) {
       copyDir(path.join(tmp, "overrides"), target);
       copyDir(path.join(tmp, "client-overrides"), target);
       status("Import finished", null);
-      return { version, name: index.name, mods: countJars(target), resourcepacks: 0 };
+      return { profileId: profile.id, version, name: profile.name, mods: countJars(target), resourcepacks: 0 };
     }
 
     // Prism export: version from mmc-pack.json
@@ -934,28 +1048,30 @@ async function importArchive(file, fallbackVersion) {
     }
     const gameDir = findGameDir(tmp);
     if (!gameDir) throw new Error("Couldn't find mods or resource packs in that file");
-    return { version, ...importGameDir(gameDir, version) };
+    const profile = createProfile({ name: fileName, version, loader: "fabric" });
+    return { profileId: profile.id, version, name: profile.name, ...importGameDir(gameDir, profile.id) };
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }
 }
 
-ipcMain.handle("import:file", async (_e, fallbackVersion) => {
+ipcMain.handle("import:file", async (_e, fallbackProfileId) => {
   const r = await dialog.showOpenDialog(win, {
     title: "Import profile",
     filters: [{ name: "Profiles", extensions: ["mrpack", "zip"] }],
     properties: ["openFile"],
   });
   if (r.canceled || !r.filePaths[0]) return null;
-  return importArchive(r.filePaths[0], fallbackVersion);
+  return importArchive(r.filePaths[0], fallbackProfileId);
 });
 
-ipcMain.handle("import:folder", async (_e, fallbackVersion) => {
+ipcMain.handle("import:folder", async (_e, fallbackProfileId) => {
   const r = await dialog.showOpenDialog(win, { title: "Import profile folder", properties: ["openDirectory"] });
   if (r.canceled || !r.filePaths[0]) return null;
   const gameDir = findGameDir(r.filePaths[0]);
   if (!gameDir) throw new Error("Couldn't find mods or resource packs in that folder");
-  return { version: fallbackVersion, ...importGameDir(gameDir, fallbackVersion) };
+  const profile = createProfile({ name: path.basename(r.filePaths[0]), version: mcVersionOf(fallbackProfileId || activeProfile().id), loader: "fabric" });
+  return { profileId: profile.id, version: profile.version, name: profile.name, ...importGameDir(gameDir, profile.id) };
 });
 
 /* Capes (official Mojang capes on the signed-in account) */
@@ -1022,6 +1138,9 @@ ipcMain.handle("launch", async (_e, { server }) => {
   running = true;
   try {
     const s = { ...DEFAULT_SETTINGS, ...readJson(SETTINGS_FILE, {}) };
+    const profile = activeProfile();
+    s.version = profile.version;
+    s.loader = profile.loader;
     status("Signing in...", null);
     const authorization = await freshAccount();
     const javaPath = await ensureJava(javaMajorFor(s.version));
@@ -1030,10 +1149,10 @@ ipcMain.handle("launch", async (_e, { server }) => {
     let custom;
     if (useFabric) {
       custom = await ensureFabric(s.version);
-      if (s.pvpMods) await ensureMods(s.version);
+      if (s.pvpMods) await ensureMods(profile.id);
     }
 
-    const instanceDir = path.join(ROOT, "instances", s.version);
+    const instanceDir = path.join(ROOT, "instances", profile.id);
     fs.mkdirSync(instanceDir, { recursive: true });
 
     const opts = {
@@ -1067,7 +1186,7 @@ ipcMain.handle("launch", async (_e, { server }) => {
       win.webContents.send("game-closed");
       if (code !== 0 && code !== null) {
         const fixes = analyzeCrash(output);
-        lastCrash = { version: s.version, fixes };
+        lastCrash = { version: profile.id, fixes };
         status(`Game crashed (code ${code})`, null);
         if (s.closeOnLaunch) win.show();
         win.webContents.send("game-crashed", { fixes });

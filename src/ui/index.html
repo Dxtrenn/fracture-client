@@ -64,7 +64,7 @@
             <p id="heroMsg">You're not logged in. Log in to start using Fracture.</p>
             <div class="hero-actions">
               <button id="playBtn" class="play">PLAY</button>
-              <button id="versionBtn" class="ghost">Change Version</button>
+              <button id="profileBtn" class="ghost profile-btn"><span class="pb-text"><b id="profileBtnName">Profile</b><small id="profileBtnSub"></small></span><span class="pb-caret">▾</span></button>
             </div>
             <div class="status">
               <div id="statusText">Ready</div>
@@ -259,12 +259,6 @@
     <div class="modal-box">
       <div class="card-head"><h3>SETTINGS</h3><button class="icon-btn" data-close>✕</button></div>
       <label>Memory: <b id="ramLabel"></b><input type="range" id="ramMax" min="2" max="16" step="1" /></label>
-      <label>Loader
-        <select id="loader">
-          <option value="fabric">Fabric (performance mods)</option>
-          <option value="vanilla">Vanilla</option>
-        </select>
-      </label>
       <div class="grid">
         <label>Width <input type="number" id="width" /></label>
         <label>Height <input type="number" id="height" /></label>
@@ -278,15 +272,25 @@
   </div>
 
   <div class="modal hidden" id="versionModal">
-    <div class="modal-box small">
-      <div class="card-head"><h3>CHANGE VERSION</h3><button class="icon-btn" data-close>✕</button></div>
-      <div class="quick-versions">
-        <button data-v="1.8.9">1.8.9</button>
-        <button data-v="1.21.4">1.21.4</button>
-        <button data-v="1.20.1">1.20.1</button>
+    <div class="modal-box">
+      <div class="card-head"><h3>PROFILES</h3><button class="icon-btn" data-close>✕</button></div>
+      <p class="muted" style="margin:-6px 0 12px">Each profile has its own version, mods, resource packs and settings. Click one to use it.</p>
+      <div id="profileList" class="profile-list"></div>
+      <div id="profileEditor" class="profile-editor hidden">
+        <h3 id="profTitle">NEW PROFILE</h3>
+        <label>Name <input id="profName" maxlength="32" placeholder="PvP 1.21" /></label>
+        <label>Minecraft version <select id="version"></select></label>
+        <label>Loader
+          <select id="profLoader">
+            <option value="fabric">Fabric (mods + performance pack)</option>
+            <option value="vanilla">Vanilla</option>
+          </select>
+        </label>
+        <div class="row-end"><button class="pill" id="profCancel">CANCEL</button><button class="play small-play" id="profSave">SAVE</button></div>
       </div>
-      <label>All releases <select id="version"></select></label>
+      <button class="pill" id="newProfileBtn" style="margin-top:12px; align-self:flex-start">+ NEW PROFILE</button>
     </div>
+  </div>
   </div>
 
   <div class="modal hidden" id="serverModal">

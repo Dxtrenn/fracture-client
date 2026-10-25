@@ -411,3 +411,25 @@ input[type=checkbox] { width: 16px; height: 16px; }
 /* News cards and the hero stay dark in light mode, so keep their text light */
 .news-item, .hero { color: #ececf1; }
 body.light .ghost { color: #c9c9d3; }
+
+/* Profiles */
+.profile-btn { display: flex; align-items: center; gap: 12px; text-align: left; padding: 9px 16px; }
+.pb-text { display: flex; flex-direction: column; line-height: 1.2; }
+.pb-text b { color: var(--text); font-size: 14px; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pb-text small { font-size: 11px; color: var(--muted); }
+.pb-caret { color: var(--muted); }
+.profile-list { display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow-y: auto; }
+.profile { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; background: var(--card); border: 2px solid transparent; cursor: pointer; }
+.profile:hover { background: var(--panel2); }
+.profile.active { border-color: var(--accent); }
+.p-ico { width: 38px; height: 38px; border-radius: 8px; display: grid; place-items: center; font-weight: 900; font-size: 18px; color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent2)); flex-shrink: 0; }
+.p-info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.p-info b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p-info small { color: var(--muted); font-size: 12px; }
+.p-acts { display: flex; gap: 2px; }
+.p-acts button { width: 30px; height: 30px; border-radius: 6px; color: var(--muted); font-size: 13px; }
+.p-acts button:hover { background: var(--line); color: var(--text); }
+.profile-editor { display: flex; flex-direction: column; }
+.profile-editor h3 { margin-bottom: 12px; }
+.row-end { display: flex; justify-content: flex-end; gap: 8px; }
+.small-play { min-width: 0; padding: 9px 22px; font-size: 13px; }
