@@ -1062,3 +1062,8 @@ $("tpApply").onclick = () => closeThemePanel(true);
     setStatus("Offline: couldn't load version list");
   }
 })();
+
+// Double-click the empty part of the top bar to maximize, like a normal window
+document.querySelector(".topbar").addEventListener("dblclick", (e) => {
+  if (!e.target.closest("button")) api.window("max");
+});

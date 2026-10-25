@@ -494,6 +494,7 @@ app.on("window-all-closed", () => app.quit());
 ipcMain.handle("window", (_e, action) => {
   if (action === "close") win.close();
   else if (action === "min") win.minimize();
+  else if (action === "max") win.isMaximized() ? win.unmaximize() : win.maximize();
 });
 
 ipcMain.handle("settings:get", () => ({ ...DEFAULT_SETTINGS, ...readJson(SETTINGS_FILE, {}) }));
