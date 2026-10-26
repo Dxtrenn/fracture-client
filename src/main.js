@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, dialog } = require("electron");
+﻿const { app, BrowserWindow, ipcMain, shell, dialog } = require("electron");
 const os = require("os");
 const path = require("path");
 const fs = require("fs");
@@ -239,7 +239,7 @@ function ensureFractureMod(profile) {
   if (fs.existsSync(`${dest}.disabled`)) return;
   if (!fs.existsSync(dest) || fs.statSync(dest).size !== fs.statSync(src).size) {
     fs.copyFileSync(src, dest);
-    log("[fracture] installed the Fracture in-game menu (Right Shift)");
+    log("[fracture] installed the Fracture in-game menu (F9)");
   }
 }
 
@@ -809,7 +809,7 @@ function readJarMeta(file) {
         try {
           const metaEntry = entries.get("fabric.mod.json");
           if (!metaEntry) return resolve({});
-          const meta = JSON.parse((await readEntry(zip, metaEntry)).toString("utf8").replace(/^﻿/, ""));
+          const meta = JSON.parse((await readEntry(zip, metaEntry)).toString("utf8").replace(/^ï»¿/, ""));
           const authors = (meta.authors || []).map((a) => (typeof a === "string" ? a : a.name)).filter(Boolean);
           let iconPath = meta.icon;
           if (iconPath && typeof iconPath === "object") iconPath = iconPath[Object.keys(iconPath).sort((a, b) => b - a)[0]];
