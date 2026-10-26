@@ -1395,6 +1395,7 @@ async function fractureSignIn() {
   });
   if (!r.ok) throw new Error(r.data?.error || "Sign-in refused");
   fractureSession = { token: r.data.token, user: r.data.user, uuid: mc.uuid };
+  fractureFetch("POST", "/presence", { status: "In launcher" }, r.data.token).catch(() => {});
   return r.data.user;
 }
 
@@ -1409,11 +1410,19 @@ ipcMain.handle("fracture:signIn", async (_e, force) => {
 
 ipcMain.handle("fracture:api", async (_e, method, p, body) => {
   try {
+    if (method === "POST" && p === "/bugs") body = { ...body, version: app.getVersion() };
     let r = await fractureFetch(method, p, body, fractureSession?.token);
     if (r.status === 401 && fractureSession) { await fractureSignIn(); r = await fractureFetch(method, p, body, fractureSession.token); }
     return r;
   } catch (e) { return { ok: false, status: 0, data: { error: e.message } }; }
 });
+
+// Tell the server we're online every minute (friends and the team list show it)
+setInterval(() => {
+  if (!fractureSession) return;
+  const status = gamesRunning ? "Playing Minecraft" : "In launcher";
+  fractureFetch("POST", "/presence", { status }, fractureSession.token).catch(() => {});
+}, 60000);
 
 // Several games can run at once (any profile, even the same one twice)
 let gamesRunning = 0;

@@ -21,6 +21,13 @@
     </defs>
   </svg>
 
+  <div class="splash" id="splash">
+    <img class="splash-logo" src="heart.png" alt="" />
+    <div class="splash-word">Fracture Client</div>
+    <div class="splash-bar"><i></i></div>
+    <div class="splash-status" id="splashStatus">Starting up...</div>
+  </div>
+
   <header class="topbar">
     <div class="brand">
       <img class="brand-logo" src="heart.png" alt="" />
@@ -40,6 +47,7 @@
         <img id="chipHead" alt="" />
         <div><small id="chipSub">Not signed in</small><b id="chipName">Guest User</b></div>
       </button>
+      <button class="icon-btn" id="bugBtn" title="Report a bug">🐞</button>
       <button class="icon-btn" id="themeBtn" title="Customize your theme">✎</button>
       <button class="icon-btn" id="consoleBtn" title="Console">&gt;_</button>
       <button class="icon-btn" id="settingsBtn" title="Settings">⚙</button>
@@ -115,6 +123,8 @@
               <button class="pill accent" id="devEvCreate">START GIVEAWAY</button>
             </div>
             <div id="devBcList" class="dev-list"></div>
+            <div class="dev-head">BUG REPORTS</div>
+            <div id="devBugList" class="dev-list"></div>
           </div>
           <div id="eventList" class="ev-list"></div>
         </div>
@@ -260,6 +270,7 @@
         <button class="side-tab" data-side="tiktok">TikTok</button>
         <button class="side-tab" data-side="spotify">Spotify</button>
         <button class="side-tab" data-side="instagram">Instagram</button>
+        <button class="side-tab" data-side="friends">Friends</button>
       </div>
       <div class="side-pane active" id="side-profile">
         <div class="swoosh"></div>
@@ -300,6 +311,11 @@
             <button data-icons="none">Text only</button>
           </div>
 
+          <div id="tpPresetsWrap" class="hidden">
+            <h4>Client styles <span class="dev-badge" style="background:var(--accent)">DEV</span></h4>
+            <div class="tp-presets" id="tpPresets"></div>
+          </div>
+
           <button class="tp-wide" id="tpSurprise">🎲 Surprise Me!</button>
           <button class="tp-wide muted-btn" id="tpReset">Reset</button>
         </div>
@@ -315,6 +331,15 @@
           <button class="ms-btn" id="swAdd"><span class="ms-logo"><i></i><i></i><i></i><i></i></span>+ Microsoft Account</button>
           <button class="ms-btn" id="swAddLink"><span class="ms-logo"><i></i><i></i><i></i><i></i></span>+ Microsoft Account (via Link)</button>
         </div>
+      </div>
+      <div class="side-pane friends-pane" id="side-friends">
+        <div class="fr-add"><input id="frName" placeholder="Add a friend by Minecraft name" maxlength="16" /><button class="pill accent" id="frAddBtn">ADD</button></div>
+        <div class="fr-msg muted" id="frMsg"></div>
+        <div id="frIncoming"></div>
+        <h5>FRIENDS</h5>
+        <div id="frList" class="fr-list"></div>
+        <h5>FRACTURE TEAM</h5>
+        <div id="teamList" class="fr-list"></div>
       </div>
       <div class="side-pane web-side" id="side-spotify"></div>
       <div class="side-pane web-side" id="side-instagram"></div>
@@ -396,6 +421,7 @@
       <div class="dlg-icon" id="dlgIcon"></div>
       <h3 id="dlgTitle"></h3>
       <p id="dlgMsg"></p>
+      <textarea id="dlgInput" class="dlg-input hidden" maxlength="2000"></textarea>
       <div class="dlg-row">
         <button class="dlg-cancel" id="dlgCancel">Cancel</button>
         <button class="dlg-ok" id="dlgOk">OK</button>

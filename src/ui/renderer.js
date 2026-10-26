@@ -33,8 +33,13 @@ function saveServers(list) {
 
 /* Styled confirm dialog (replaces the plain Windows popup) */
 let dlgResolve = null;
-function ask({ title, message = "", ok = "OK", danger = false, icon }) {
+let dlgInputMode = false;
+function ask({ title, message = "", ok = "OK", danger = false, icon, input }) {
   if (dlgResolve) dlgResolve(false);
+  dlgInputMode = !!input;
+  $("dlgInput").classList.toggle("hidden", !input);
+  $("dlgInput").value = "";
+  $("dlgInput").placeholder = typeof input === "string" ? input : "";
   $("dlgTitle").textContent = title;
   $("dlgMsg").textContent = message;
   $("dlgMsg").classList.toggle("hidden", !message);
@@ -44,7 +49,7 @@ function ask({ title, message = "", ok = "OK", danger = false, icon }) {
   $("dlgIcon").classList.toggle("danger", danger);
   $("dlg").classList.remove("hidden");
   requestAnimationFrame(() => $("dlg").classList.add("show"));
-  setTimeout(() => $(danger ? "dlgCancel" : "dlgOk").focus(), 50);
+  setTimeout(() => $(input ? "dlgInput" : danger ? "dlgCancel" : "dlgOk").focus(), 50);
   return new Promise((resolve) => (dlgResolve = resolve));
 }
 function closeDialog(result) {
@@ -53,7 +58,7 @@ function closeDialog(result) {
   dlgResolve = null;
   $("dlg").classList.remove("show");
   setTimeout(() => $("dlg").classList.add("hidden"), 150);
-  r(result);
+  r(result && dlgInputMode ? $("dlgInput").value : result);
 }
 $("dlgOk").onclick = () => closeDialog(true);
 $("dlgCancel").onclick = () => closeDialog(false);
@@ -1249,7 +1254,7 @@ function hexToHsv(hex) {
 }
 
 function applyTheme(t) {
-  const base = BASES[t.mode] || BASES.dark;
+  const base = t.base || BASES[t.mode] || BASES.dark;
   const colors = t.colors.length ? t.colors : DEFAULT_THEME.colors;
   const k = t.intensity / 100;
   const root = document.documentElement.style;
@@ -1385,7 +1390,7 @@ dragOn($("tpHue"), (x) => {
 
 $("tpFont").innerHTML = THEME_FONTS.map((f) => `<option value="${f}" style="font-family:'${f}'">${f}</option>`).join("");
 $("tpFont").onchange = () => { draft.font = $("tpFont").value; applyTheme(draft); };
-document.querySelectorAll("#tpMode button").forEach((b) => (b.onclick = () => { draft.mode = b.dataset.mode; syncThemeForm(); }));
+document.querySelectorAll("#tpMode button").forEach((b) => (b.onclick = () => { draft.mode = b.dataset.mode; delete draft.base; syncThemeForm(); }));
 document.querySelectorAll("#tpIcons button").forEach((b) => (b.onclick = () => { draft.icons = b.dataset.icons; syncThemeForm(); }));
 $("tpIntensity").oninput = () => { draft.intensity = Number($("tpIntensity").value); $("tpIntensityLabel").textContent = `${draft.intensity}%`; applyTheme(draft); };
 $("tpButtons").oninput = () => { draft.buttonSize = Number($("tpButtons").value); $("tpButtonsLabel").textContent = `${draft.buttonSize}%`; applyTheme(draft); };
@@ -1502,6 +1507,9 @@ async function fractureConnect(force) {
     $("chipName").appendChild(b);
   }
   $("devPanel").classList.toggle("hidden", !isDev);
+  $("tpPresetsWrap").classList.toggle("hidden", !isDev);
+  if (isDev) renderBugs();
+  renderFriends();
   if (fUser?.color) $("devPanel").style.setProperty("--dev", fUser.color);
   $("evStatus").textContent = fUser ? "" : r.error ? "Not connected: " + r.error : "";
   renderBroadcasts();
@@ -1586,5 +1594,100 @@ $("eventList").addEventListener("click", async (e) => {
   }
 });
 
-fractureConnect();
+// Loading screen: stays up while we sign in to the Fracture server (never more than 6 seconds)
+{
+  const hideSplash = () => $("splash").classList.add("gone");
+  $("splashStatus").textContent = "Signing in to Fracture...";
+  setTimeout(hideSplash, 6000);
+  fractureConnect().finally(() => { $("splashStatus").textContent = "Ready"; setTimeout(hideSplash, 250); });
+}
 setInterval(renderBroadcasts, 5 * 60 * 1000);
+
+/* ---- Bug reports ---- */
+$("bugBtn").addEventListener("click", async () => {
+  if (!fUser) return ask({ title: "Sign in first", message: "Sign in with your Minecraft account so the team can reply to your report.", icon: "🐞" });
+  const text = await ask({ title: "Report a bug", message: "What went wrong? Say what you clicked and what happened.", ok: "Send", icon: "🐞", input: "Describe the bug..." });
+  if (!text || !text.trim()) return;
+  const r = await api.fractureApi("POST", "/bugs", { message: text.trim() });
+  ask({ title: r.ok ? "Thanks, report sent!" : "Couldn't send it", message: r.ok ? "The Fracture team will look at it." : r.data?.error || "Error " + r.status, icon: r.ok ? "✓" : "!" });
+});
+
+async function renderBugs() {
+  if (fUser?.role !== "dev") return;
+  const r = await api.fractureApi("GET", "/bugs");
+  const list = r.data?.bugs || [];
+  $("devBugList").innerHTML = list.length ? list.map((b) =>
+    `<div><span>🐞 <b>${escH(b.name)}</b>${b.version ? " (v" + escH(b.version) + ")" : ""}: ${escH(b.message)}</span><button class="pill" data-fixbug="${b.id}">DONE</button></div>`).join("")
+    : `<div><span class="muted">No open bug reports.</span></div>`;
+}
+$("devBugList").addEventListener("click", async (e) => {
+  const id = e.target.dataset?.fixbug;
+  if (!id) return;
+  await api.fractureApi("POST", `/bugs/${id}/resolve`);
+  renderBugs();
+});
+
+/* ---- Friends and the team list ---- */
+const head = (uuid) => `https://mc-heads.net/avatar/${uuid}/28`;
+const frRow = (f, buttons = "") =>
+  `<div class="fr ${f.online ? "on" : ""}"><img src="${head(f.uuid)}" alt="" /><div class="who"><b>${escH(f.name)}</b><small>${f.online ? escH(f.status || "Online") : "Offline"}</small></div>${buttons}<span class="dot"></span></div>`;
+
+async function renderFriends() {
+  const t = await api.fractureApi("GET", "/team");
+  const team = t.data?.team || [];
+  $("teamList").innerHTML = team.map((m) =>
+    frRow({ uuid: m.uuid, name: m.display, online: m.online, status: m.status }).replace("<b>", `<b style="color:${escH(m.color)}">`)).join("") || `<div class="fr-empty">Can't reach the Fracture server.</div>`;
+  if (!fUser) {
+    $("frList").innerHTML = `<div class="fr-empty">Sign in to add friends.</div>`;
+    $("frIncoming").innerHTML = "";
+    return;
+  }
+  const r = await api.fractureApi("GET", "/friends");
+  const d = r.data || {};
+  $("frIncoming").innerHTML = (d.incoming || []).map((f) =>
+    frRow(f, `<button class="yes" data-fraccept="${f.uuid}">ACCEPT</button><button data-frremove="${f.uuid}">✕</button>`).replace('class="fr', 'class="fr req')).join("");
+  const friends = (d.friends || []).map((f) => frRow(f, `<button data-frremove="${f.uuid}" title="Remove friend">✕</button>`));
+  const outgoing = (d.outgoing || []).map((f) => frRow({ ...f, status: null }, `<button data-frremove="${f.uuid}" title="Cancel request">✕</button>`).replace("Offline", "Request sent"));
+  $("frList").innerHTML = [...friends, ...outgoing].join("") || `<div class="fr-empty">No friends yet. Add someone who uses Fracture Client.</div>`;
+  const pending = (d.incoming || []).length;
+  document.querySelector('[data-side="friends"]').textContent = pending ? `Friends (${pending})` : "Friends";
+}
+async function addFriend() {
+  const name = $("frName").value.trim();
+  if (!name) return;
+  const r = await api.fractureApi("POST", "/friends", { name });
+  $("frMsg").textContent = r.ok ? (r.data.accepted ? `You and ${r.data.name} are now friends!` : `Friend request sent to ${r.data.name}.`) : r.data?.error || "Couldn't add them";
+  if (r.ok) $("frName").value = "";
+  renderFriends();
+}
+$("frAddBtn").addEventListener("click", addFriend);
+$("frName").addEventListener("keydown", (e) => { if (e.key === "Enter") addFriend(); });
+$("side-friends").addEventListener("click", async (e) => {
+  const acc = e.target.dataset?.fraccept, rm = e.target.dataset?.frremove;
+  if (acc) await api.fractureApi("POST", `/friends/${acc}/accept`);
+  else if (rm) {
+    if (!(await ask({ title: "Remove friend?", ok: "Remove", danger: true }))) return;
+    await api.fractureApi("DELETE", `/friends/${rm}`);
+  } else return;
+  renderFriends();
+});
+document.querySelector('[data-side="friends"]').addEventListener("click", renderFriends);
+setInterval(() => { if (fUser) renderFriends(); }, 60000);
+
+/* ---- Client style theme presets (dev accounts only) ---- */
+const CLIENT_STYLES = {
+  "Modrinth style": { colors: ["#1bd96a", "#00af5c"], base: { bg: "#16181c", panel: "#1e2026", panel2: "#27292f", card: "#1a1c20", line: "#33363d", text: "#e2e4e9", muted: "#9a9fa8" }, font: "Segoe UI" },
+  "Lunar style": { colors: ["#2f7bff", "#56c8ff"], base: { bg: "#080b12", panel: "#0f141e", panel2: "#161d2b", card: "#0c1018", line: "#1f2838", text: "#e6ecf7", muted: "#7c879c" }, font: "Bahnschrift" },
+  "Dawn style": { colors: ["#ff7a59", "#ffc163"], base: { bg: "#120c0d", panel: "#1a1214", panel2: "#24191b", card: "#160f11", line: "#33242a", text: "#f4e9e4", muted: "#a38f8a" }, font: "Segoe UI" },
+  "Prism style": { colors: ["#8b5cf6", "#e879f9"], base: { bg: "#17161c", panel: "#1f1e26", panel2: "#292833", card: "#1b1a21", line: "#353443", text: "#ebe9f2", muted: "#9592a6" }, font: "Segoe UI" },
+};
+$("tpPresets").innerHTML = Object.entries(CLIENT_STYLES).map(([name, p]) =>
+  `<button class="tp-preset" data-preset="${name}" style="background:${p.base.panel2};color:${p.base.text}">${name}<i style="background:linear-gradient(90deg, ${p.colors.join(", ")})"></i></button>`).join("");
+$("tpPresets").addEventListener("click", (e) => {
+  const name = e.target.closest("[data-preset]")?.dataset.preset;
+  if (!name) return;
+  const p = CLIENT_STYLES[name];
+  draft = { ...JSON.parse(JSON.stringify(DEFAULT_THEME)), mode: "dark", colors: [...p.colors], base: { ...p.base }, font: p.font, buttonSize: draft.buttonSize, icons: draft.icons };
+  activeStop = 0;
+  syncThemeForm();
+});
