@@ -263,8 +263,12 @@ function ensureFractureMod(profile) {
   const dest = path.join(dir, FRACTURE_MOD_FILE);
   // Respect the user turning it off in the Installed tab
   if (fs.existsSync(`${dest}.disabled`)) return;
-  if (!fs.existsSync(dest) || fs.statSync(dest).size !== fs.statSync(src).size) {
-    fs.copyFileSync(src, dest);
+  // Always rewritten (it is tiny), which also repairs a copy that got marked hidden
+  {
+    // Write a fresh file instead of copying: a copy keeps Windows attributes like Hidden,
+    // and Fabric skips hidden jars
+    fs.rmSync(dest, { force: true });
+    fs.writeFileSync(dest, fs.readFileSync(src));
     log("[fracture] installed the Fracture in-game menu (F9)");
   }
 }
@@ -1397,7 +1401,8 @@ ipcMain.handle("launch", async (_e, { server, profileId } = {}) => {
       // fabric.noGui: report mod errors in the log instead of Fabric's popup, so we can offer a fix
       customArgs: ["-Dfabric.noGui=true", ...s.jvmArgs.split(/\s+/).filter(Boolean)],
       // Detached so the game keeps running if the launcher is closed or restarted
-      overrides: { gameDirectory: instanceDir, detached: true },
+      // cwd per profile so each game writes its own logs (two games at once would share one log otherwise)
+      overrides: { gameDirectory: instanceDir, cwd: instanceDir, detached: true },
     };
     if (server) {
       const [host, port] = server.split(":");
@@ -1437,7 +1442,7 @@ ipcMain.handle("launch", async (_e, { server, profileId } = {}) => {
     status(gamesRunning > 1 ? `Playing ${gamesRunning} games` : `Playing ${profile.name}`, null);
     win.webContents.send("game-started", { running: gamesRunning });
     if (s.closeOnLaunch) win.hide();
-    return true;
+    return { running: gamesRunning };
   } catch (e) {
     status(`Error: ${e.message}`, null);
     throw e;

@@ -1066,7 +1066,8 @@ async function play(server, profileId) {
   updateHero();
   document.querySelector('[data-tab="play"]').click();
   try {
-    await api.launch({ server, profileId });
+    const result = await api.launch({ server, profileId });
+    if (result && typeof result.running === "number") gamesRunning = result.running;
   } catch (e) {
     setStatus(`Error: ${cleanError(e)}`);
   }
