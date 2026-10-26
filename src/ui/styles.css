@@ -624,3 +624,33 @@ button:not(:disabled):active { transform: translateY(0) scale(.96) !important; t
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Fracture server: broadcasts, events, dev panel */
+.bcast { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+.bcast .b { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; background: linear-gradient(90deg, rgba(255,59,78,.18), rgba(255,122,59,.12)); border: 1px solid rgba(255,59,78,.35); font-weight: 700; font-size: 13px; }
+.bcast .b span { flex: 1; }
+.bcast .b small { opacity: .6; font-weight: 600; }
+.bcast .b button { opacity: .7; font-size: 14px; }
+.bcast .b button:hover { opacity: 1; }
+.ev-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; overflow-y: auto; align-content: start; }
+.ev { background: var(--panel2); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 6px; border: 1px solid transparent; }
+.ev.open { border-color: rgba(255,59,78,.35); }
+.ev h4 { margin: 0; font-size: 15px; }
+.ev .prize { color: var(--accent2); font-weight: 800; font-size: 13px; }
+.ev .meta { font-size: 12px; opacity: .7; }
+.ev .winner { font-weight: 800; color: #ffd36b; }
+.ev .row { display: flex; gap: 8px; margin-top: 6px; }
+.ev .row button { flex: 1; }
+.pill.accent { background: var(--accent); color: #fff; }
+.pill.accent:hover { filter: brightness(1.1); background: var(--accent); }
+.pill:disabled { opacity: .5; cursor: default; }
+.dev-panel { background: var(--panel2); border: 1px solid var(--dev, #8b0000); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; display: flex; flex-direction: column; gap: 8px; }
+.dev-head { font-size: 11px; font-weight: 900; letter-spacing: 1px; color: var(--dev, #8b0000); filter: brightness(1.8); }
+.dev-row { display: flex; gap: 8px; }
+.dev-row input { flex: 1; min-width: 0; }
+.dev-row input[type=number] { flex: 0 0 70px; }
+.dev-list { display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.dev-list div { display: flex; gap: 8px; align-items: center; opacity: .85; }
+.dev-list div span { flex: 1; }
+.dev-badge { display: inline-block; margin-left: 6px; padding: 1px 5px; border-radius: 4px; font-size: 9px; font-weight: 900; letter-spacing: .5px; color: #fff; vertical-align: middle; }
+.empty-ev { grid-column: 1 / -1; text-align: center; padding: 40px 0; font-size: 16px; color: #fff; opacity: .8; }

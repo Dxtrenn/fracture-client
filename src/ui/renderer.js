@@ -92,6 +92,7 @@ document.querySelectorAll(".tab").forEach((tab) =>
     $(tab.dataset.tab).classList.add("active");
     if (tab.dataset.group) openAccGroup(tab.dataset.group);
     if (tab.dataset.tab === "profiles") renderProfilesPage();
+    if (tab.dataset.tab === "events") renderEvents();
     if (tab.dataset.tab === "mods") {
       if ($("mtab-installed").classList.contains("active")) renderMods();
       else searchMods();
@@ -1475,3 +1476,115 @@ async function checkForUpdate() {
 document.querySelector(".topbar").addEventListener("dblclick", (e) => {
   if (!e.target.closest("button")) api.window("max");
 });
+
+/* ---- Fracture server: sign-in, broadcasts, events, dev panel ---- */
+let fUser = null;
+const escH = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const timeLeft = (ms) => {
+  const m = Math.max(0, Math.round((ms - Date.now()) / 60000));
+  if (m < 60) return m + "m";
+  const h = Math.floor(m / 60);
+  return h < 48 ? h + "h " + (m % 60) + "m" : Math.floor(h / 24) + "d " + (h % 24) + "h";
+};
+const toMs = (t) => (typeof t === "number" ? (t < 1e12 ? t * 1000 : t) : Date.parse(t));
+
+async function fractureConnect(force) {
+  const r = await api.fractureSignIn(force);
+  fUser = r.ok ? r.user : null;
+  const isDev = fUser?.role === "dev";
+  document.querySelector(".dev-badge")?.remove();
+  if (isDev) {
+    if (fUser.name) $("chipName").textContent = fUser.name;
+    const b = document.createElement("span");
+    b.className = "dev-badge";
+    b.textContent = "DEV";
+    b.style.background = fUser.color || "#8b0000";
+    $("chipName").appendChild(b);
+  }
+  $("devPanel").classList.toggle("hidden", !isDev);
+  if (fUser?.color) $("devPanel").style.setProperty("--dev", fUser.color);
+  $("evStatus").textContent = fUser ? "" : r.error ? "Not connected: " + r.error : "";
+  renderBroadcasts();
+  if ($("events").classList.contains("active")) renderEvents();
+}
+
+let dismissed = [];
+try { dismissed = JSON.parse(localStorage.getItem("fractureDismissed") || "[]"); } catch {}
+async function renderBroadcasts() {
+  const r = await api.fractureApi("GET", "/broadcasts");
+  const list = r.data?.broadcasts || [];
+  $("bcastBar").innerHTML = list.filter((b) => !dismissed.includes(String(b.id))).map((b) =>
+    `<div class="b">📣 <span>${escH(b.message)}</span><small>${escH(b.author || "")}</small><button data-dismiss="${b.id}" title="Dismiss">✕</button></div>`).join("");
+  $("bcastBar").classList.toggle("hidden", !$("bcastBar").innerHTML);
+  $("devBcList").innerHTML = list.map((b) =>
+    `<div><span>📣 ${escH(b.message)}</span><button class="pill" data-delbc="${b.id}">DELETE</button></div>`).join("");
+}
+$("bcastBar").addEventListener("click", (e) => {
+  const id = e.target.dataset?.dismiss;
+  if (!id) return;
+  dismissed.push(id);
+  try { localStorage.setItem("fractureDismissed", JSON.stringify(dismissed.slice(-100))); } catch {}
+  renderBroadcasts();
+});
+$("devBcList").addEventListener("click", async (e) => {
+  const id = e.target.dataset?.delbc;
+  if (!id || !(await ask({ title: "Delete broadcast?", message: "Players will stop seeing it.", ok: "Delete", danger: true }))) return;
+  await api.fractureApi("DELETE", "/broadcasts/" + id);
+  renderBroadcasts();
+});
+$("devBcSend").addEventListener("click", async () => {
+  const message = $("devBcMsg").value.trim();
+  if (!message) return;
+  const r = await api.fractureApi("POST", "/broadcasts", { message, hours: Number($("devBcHours").value) || 24 });
+  if (!r.ok) return ask({ title: "Broadcast failed", message: r.data?.error || "Error " + r.status });
+  $("devBcMsg").value = "";
+  renderBroadcasts();
+});
+$("devEvCreate").addEventListener("click", async () => {
+  const title = $("devEvTitle").value.trim(), prize = $("devEvPrize").value.trim();
+  if (!title || !prize) return;
+  const r = await api.fractureApi("POST", "/events", { title, prize, hours: Number($("devEvHours").value) || 48 });
+  if (!r.ok) return ask({ title: "Could not start giveaway", message: r.data?.error || "Error " + r.status });
+  $("devEvTitle").value = $("devEvPrize").value = "";
+  renderEvents();
+});
+
+async function renderEvents() {
+  const r = await api.fractureApi("GET", "/events");
+  if (!r.ok) { $("eventList").innerHTML = `<div class="empty-ev">Can't reach the Fracture server right now.</div>`; return; }
+  const list = r.data?.events || [];
+  const isDev = fUser?.role === "dev";
+  $("eventList").innerHTML = list.length ? list.map((e) => {
+    const ends = toMs(e.ends_at);
+    const winner = e.winner_name || e.winner;
+    const open = !winner && ends > Date.now();
+    return `<div class="ev ${open ? "open" : ""}">
+      <h4>${escH(e.title)}</h4>
+      <div class="prize">🎁 ${escH(e.prize)}</div>
+      <div class="meta">${e.entry_count ?? 0} entered · ${winner ? "finished" : open ? "ends in " + timeLeft(ends) : "ended, waiting for draw"}</div>
+      ${winner ? `<div class="winner">🏆 Winner: ${escH(winner)}</div>` : ""}
+      <div class="row">
+        ${winner ? "" : e.entered ? `<button class="pill" disabled>✓ ENTERED</button>`
+          : `<button class="pill accent" data-enter="${e.id}" ${fUser && open ? "" : "disabled"}>${fUser ? "ENTER" : "SIGN IN TO ENTER"}</button>`}
+        ${isDev && !winner ? `<button class="pill" data-draw="${e.id}">DRAW WINNER</button>` : ""}
+      </div>
+    </div>`;
+  }).join("") : `<div class="empty-ev">No events right now. Check back soon!</div>`;
+}
+$("eventList").addEventListener("click", async (e) => {
+  const enter = e.target.dataset?.enter, draw = e.target.dataset?.draw;
+  if (enter) {
+    e.target.disabled = true;
+    const r = await api.fractureApi("POST", `/events/${enter}/enter`);
+    if (!r.ok) ask({ title: "Could not enter", message: r.data?.error || "Error " + r.status });
+    renderEvents();
+  } else if (draw) {
+    if (!(await ask({ title: "Draw a winner?", message: "This picks one random entry and closes the giveaway.", ok: "Draw" }))) return;
+    const r = await api.fractureApi("POST", `/events/${draw}/draw`);
+    if (!r.ok) ask({ title: "Could not draw", message: r.data?.error || "Error " + r.status });
+    renderEvents();
+  }
+});
+
+fractureConnect();
+setInterval(renderBroadcasts, 5 * 60 * 1000);

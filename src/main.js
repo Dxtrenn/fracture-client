@@ -2,6 +2,7 @@
 const os = require("os");
 const path = require("path");
 const fs = require("fs");
+const crypto = require("crypto");
 const https = require("https");
 const { Client } = require("minecraft-launcher-core");
 const { Auth } = require("msmc");
@@ -1361,6 +1362,58 @@ async function freshAccount() {
   saveAccount(xbox, mc);
   return mc.mclc();
 }
+
+// ---- Fracture server: sign in with the Minecraft player certificate, then call the API ----
+const FRACTURE_API = "https://fracture-api.fractureclient.workers.dev";
+let fractureSession = null; // { token, user, uuid }
+
+async function fractureFetch(method, p, body, token) {
+  const r = await fetch(FRACTURE_API + p, {
+    method,
+    headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  let data = null;
+  try { data = await r.json(); } catch {}
+  return { ok: r.ok, status: r.status, data };
+}
+
+async function fractureSignIn() {
+  const mc = await freshAccount();
+  const c = await fractureFetch("POST", "/auth/challenge");
+  if (!c.ok) throw new Error("Fracture server is not answering");
+  const cr = await fetch("https://api.minecraftservices.com/player/certificates", { method: "POST", headers: { authorization: `Bearer ${mc.access_token}` } });
+  if (!cr.ok) throw new Error("Could not get a Minecraft certificate");
+  const cert = await cr.json();
+  const signature = crypto.sign("sha256", Buffer.from("fracture-login:" + c.data.serverId), crypto.createPrivateKey(cert.keyPair.privateKey)).toString("base64");
+  const r = await fractureFetch("POST", "/auth", {
+    uuid: mc.uuid, username: mc.name,
+    publicKey: cert.keyPair.publicKey.replace(/-----[^-]+-----/g, "").replace(/\s+/g, ""),
+    expiresAt: new Date(cert.expiresAt).getTime(),
+    mojangSignature: cert.publicKeySignatureV2,
+    signature, serverId: c.data.serverId, ticket: c.data.ticket,
+  });
+  if (!r.ok) throw new Error(r.data?.error || "Sign-in refused");
+  fractureSession = { token: r.data.token, user: r.data.user, uuid: mc.uuid };
+  return r.data.user;
+}
+
+ipcMain.handle("fracture:signIn", async (_e, force) => {
+  try {
+    const acc = activeAccount();
+    if (!acc) return { ok: false, error: "Not logged in" };
+    if (!force && fractureSession && fractureSession.uuid === acc.mclc.uuid) return { ok: true, user: fractureSession.user };
+    return { ok: true, user: await fractureSignIn() };
+  } catch (e) { fractureSession = null; return { ok: false, error: e.message }; }
+});
+
+ipcMain.handle("fracture:api", async (_e, method, p, body) => {
+  try {
+    let r = await fractureFetch(method, p, body, fractureSession?.token);
+    if (r.status === 401 && fractureSession) { await fractureSignIn(); r = await fractureFetch(method, p, body, fractureSession.token); }
+    return r;
+  } catch (e) { return { ok: false, status: 0, data: { error: e.message } }; }
+});
 
 // Several games can run at once (any profile, even the same one twice)
 let gamesRunning = 0;

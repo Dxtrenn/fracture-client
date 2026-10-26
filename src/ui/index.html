@@ -33,6 +33,7 @@
         <button class="tab" data-tab="mods"><span class="ti" data-i="mods">▦</span> Mods</button>
         <button class="tab" data-tab="capes" data-group="skins"><span class="ti" data-i="skins">☻</span> Skins</button>
         <button class="tab" data-tab="capes" data-group="capes"><span class="ti" data-i="capes">◭</span> Capes</button>
+        <button class="tab" data-tab="events"><span class="ti" data-i="events">★</span> Events</button>
       </nav>
       <button class="update-btn hidden" id="updateBtn" title="A new version is available">⬇ UPDATE FRACTURE</button>
       <button class="account-chip" id="accountChip">
@@ -52,6 +53,7 @@
     <div class="left">
       <!-- PLAY -->
       <section id="play" class="page active">
+        <div id="bcastBar" class="bcast hidden"></div>
         <div class="hero">
           <div class="hero-art"></div>
           <div class="crash hidden" id="crash">
@@ -88,6 +90,33 @@
             </div>
             <div class="server-list" id="serverList"></div>
           </div>
+        </div>
+      </section>
+
+      <!-- EVENTS -->
+      <section id="events" class="page">
+        <div class="card full">
+          <div class="card-head">
+            <h3>EVENTS</h3>
+            <span class="muted" id="evStatus"></span>
+          </div>
+          <p class="muted" style="margin:-4px 0 12px">Giveaways from the Fracture team. Prizes are Fracture cosmetics. Enter once, winners are drawn at random.</p>
+          <div id="devPanel" class="dev-panel hidden">
+            <div class="dev-head">DEV PANEL</div>
+            <div class="dev-row">
+              <input id="devBcMsg" placeholder="Broadcast message to every player" maxlength="300" />
+              <input id="devBcHours" type="number" value="24" min="1" max="720" title="Hours" />
+              <button class="pill accent" id="devBcSend">SEND BROADCAST</button>
+            </div>
+            <div class="dev-row">
+              <input id="devEvTitle" placeholder="Giveaway title" maxlength="80" />
+              <input id="devEvPrize" placeholder="Prize (cosmetic)" maxlength="80" />
+              <input id="devEvHours" type="number" value="48" min="1" max="720" title="Hours" />
+              <button class="pill accent" id="devEvCreate">START GIVEAWAY</button>
+            </div>
+            <div id="devBcList" class="dev-list"></div>
+          </div>
+          <div id="eventList" class="ev-list"></div>
         </div>
       </section>
 

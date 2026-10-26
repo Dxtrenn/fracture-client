@@ -31,6 +31,8 @@ contextBridge.exposeInMainWorld("fractur", {
   installUpdate: () => ipcRenderer.invoke("update:install"),
   getNews: () => ipcRenderer.invoke("news:get"),
   openNewsLink: (url) => ipcRenderer.invoke("news:open", url),
+  fractureSignIn: (force) => ipcRenderer.invoke("fracture:signIn", force),
+  fractureApi: (method, path, body) => ipcRenderer.invoke("fracture:api", method, path, body),
   fixCrash: () => ipcRenderer.invoke("crash:fix"),
   deviceStart: () => ipcRenderer.invoke("account:deviceStart"),
   deviceCancel: () => ipcRenderer.invoke("account:deviceCancel"),
