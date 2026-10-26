@@ -20,11 +20,11 @@ jobs:
       matrix:
         include:
           # One .dmg per job: hdiutil on the runners often fails when making two in a row
-          - os: macos-latest
+          - os: macos-14
             name: mac-arm64
             args: --mac dmg --arm64
             files: dist/*.dmg
-          - os: macos-latest
+          - os: macos-14
             name: mac-x64
             args: --mac dmg --x64
             files: dist/*.dmg
