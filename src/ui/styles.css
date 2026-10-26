@@ -451,3 +451,11 @@ body.light .ghost { color: #c9c9d3; }
 /* Minecraft-style font (Monocraft, SIL Open Font License; see fonts/Monocraft-OFL.txt) */
 @font-face { font-family: "Minecraft"; src: url("fonts/Monocraft.ttf") format("truetype"); font-weight: 400 600; }
 @font-face { font-family: "Minecraft"; src: url("fonts/Monocraft-Bold.ttf") format("truetype"); font-weight: 700 900; }
+
+/* Wordmark: always Outfit ExtraBold in the brand gradient, whatever theme or font is picked */
+@font-face { font-family: "Outfit"; src: url("fonts/Outfit.ttf") format("truetype"); font-weight: 100 900; }
+.brand .wordmark {
+  font-family: "Outfit", "Segoe UI", sans-serif; font-weight: 800; font-size: 24px; letter-spacing: -0.5px; line-height: 1;
+  background: linear-gradient(90deg, #ff3b4e, #ff7a3b); -webkit-background-clip: text; background-clip: text; color: transparent;
+  padding-bottom: 2px;
+}
