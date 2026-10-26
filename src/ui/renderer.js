@@ -263,6 +263,11 @@ function renderServers() {
     row.title = `Join ${s.ip}`;
     row.innerHTML = `<span class="noicon"></span><span class="name"></span><span class="count"><span class="dot"></span><span class="n">…</span></span><button class="del" title="Remove">✕</button>`;
     row.querySelector(".name").textContent = s.name;
+    if (s.icon) {
+      const img = document.createElement("img");
+      img.src = `data:image/png;base64,${s.icon}`;
+      row.querySelector(".noicon").replaceWith(img);
+    }
     row.onclick = () => play(s.ip);
     row.querySelector(".del").onclick = (e) => {
       e.stopPropagation();
@@ -275,13 +280,40 @@ function renderServers() {
     api.ping(s.ip).then((r) => {
       row.querySelector(".n").textContent = r.online ? r.players.toLocaleString() : "offline";
       row.querySelector(".dot").classList.toggle("on", r.online);
-      if (r.icon) {
+      if (r.icon && row.querySelector(".noicon")) {
         const img = document.createElement("img");
         img.src = r.icon;
         row.querySelector(".noicon").replaceWith(img);
       }
     });
   });
+}
+
+// Adds servers saved in any profile (or other launcher) that aren't in the list yet.
+// Each address is only imported once, so removing one keeps it removed.
+async function importSavedServers() {
+  let saved;
+  try { saved = await api.savedServers(); } catch { return; }
+  let imported;
+  try { imported = new Set(JSON.parse(localStorage.getItem("importedServers")) || []); } catch { imported = new Set(); }
+  const list = loadServers();
+  const have = new Set(list.map((s) => s.ip.toLowerCase()));
+  let added = 0;
+  for (const s of saved) {
+    const key = s.ip.toLowerCase();
+    if (imported.has(key)) continue;
+    imported.add(key);
+    if (have.has(key)) continue;
+    list.push({ name: s.name, ip: s.ip, icon: s.icon || undefined });
+    have.add(key);
+    added++;
+  }
+  try { localStorage.setItem("importedServers", JSON.stringify([...imported])); } catch {}
+  if (added) {
+    saveServers(list);
+    renderServers();
+    setStatus(`Added ${added} saved server${added === 1 ? "" : "s"} from your profiles`);
+  }
 }
 
 $("addServer").addEventListener("submit", (e) => {
@@ -902,7 +934,7 @@ document.addEventListener("keydown", (e) => {
 
 /* Theme customizer */
 const DEFAULT_THEME = { mode: "dark", colors: ["#ff3b4e", "#ff7a3b"], intensity: 0, angle: 135, font: "Segoe UI", icons: "classic" };
-const THEME_FONTS = ["Segoe UI", "Bahnschrift", "Trebuchet MS", "Verdana", "Tahoma", "Georgia", "Consolas", "Lucida Console", "Franklin Gothic Medium", "Segoe Print", "Comic Sans MS", "Impact"];
+const THEME_FONTS = ["Segoe UI", "Minecraft", "Bahnschrift", "Trebuchet MS", "Verdana", "Tahoma", "Georgia", "Consolas", "Lucida Console", "Franklin Gothic Medium", "Segoe Print", "Comic Sans MS", "Impact"];
 const ICON_SETS = {
   classic: { play: "▶", mods: "▦", capes: "◭" },
   emoji: { play: "🎮", mods: "🧩", capes: "🎨" },
@@ -1135,6 +1167,7 @@ The launcher will download it and restart into the installer.`)) return;
   saveSettings();
   renderNews();
   checkForUpdate();
+  importSavedServers();
   renderServers();
   renderAccount();
 

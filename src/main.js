@@ -782,6 +782,33 @@ ipcMain.handle("open-external", (_e, url) => {
 
 ipcMain.handle("open-folder", () => shell.openPath(ROOT));
 
+// Multiplayer servers saved in every profile (ours first, then other launchers), deduped by address
+ipcMain.handle("servers:saved", () => {
+  const { readServersDat } = require("./nbt");
+  const appData = app.getPath("appData");
+  const files = [];
+  for (const p of loadProfiles().list) files.push(path.join(ROOT, "instances", p.id, "servers.dat"));
+  files.push(path.join(IS_MAC ? appData : appData, IS_MAC ? "minecraft" : ".minecraft", "servers.dat"));
+  for (const d of subdirs(path.join(appData, "PrismLauncher", "instances"))) files.push(path.join(d, "minecraft", "servers.dat"), path.join(d, ".minecraft", "servers.dat"));
+  for (const d of subdirs(path.join(appData, "ModrinthApp", "profiles"))) files.push(path.join(d, "servers.dat"));
+  for (const d of subdirs(path.join(appData, ".dawn", "profiles"))) files.push(path.join(d, ".minecraft", "servers.dat"), path.join(d, "private-game-content", "servers.dat"));
+  for (const d of subdirs(path.join(os.homedir(), ".lunarclient", "profiles"))) files.push(path.join(d, "servers.dat"));
+
+  const seen = new Set();
+  const out = [];
+  for (const f of files) {
+    let list;
+    try { list = readServersDat(fs.readFileSync(f)); } catch { continue; }
+    for (const s of list) {
+      const key = s.ip.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(s);
+    }
+  }
+  return out;
+});
+
 /* Self-update from GitHub releases */
 
 const RELEASES_API = "https://api.github.com/repos/Dxtrenn/fracture-client/releases/latest";

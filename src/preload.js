@@ -26,6 +26,7 @@ contextBridge.exposeInMainWorld("fractur", {
   deleteProfile: (id) => ipcRenderer.invoke("profiles:delete", id),
   openProfile: (id) => ipcRenderer.invoke("profiles:open", id),
   checkUpdate: () => ipcRenderer.invoke("update:check"),
+  savedServers: () => ipcRenderer.invoke("servers:saved"),
   installUpdate: () => ipcRenderer.invoke("update:install"),
   getNews: () => ipcRenderer.invoke("news:get"),
   openNewsLink: (url) => ipcRenderer.invoke("news:open", url),
