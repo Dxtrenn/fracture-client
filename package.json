@@ -62,11 +62,12 @@
       ],
       "icon": "build/icon.png",
       "category": "public.app-category.games",
-      "identity": "-",
+      "identity": null,
       "artifactName": "Fracture-Client-${version}-mac-${arch}.${ext}"
     },
     "dmg": {
       "title": "Fracture Client"
-    }
+    },
+    "afterPack": "build/adhoc-sign.js"
   }
 }
