@@ -18,7 +18,8 @@ const NEWS = [
 
 let settings;
 let account = null;
-let running = false;
+let launching = false; // true only while a game is being set up
+let gamesRunning = 0;
 
 function loadServers() {
   let list;
@@ -38,7 +39,8 @@ document.querySelectorAll(".tab").forEach((tab) =>
     document.querySelectorAll(".tab, .page").forEach((el) => el.classList.remove("active"));
     tab.classList.add("active");
     $(tab.dataset.tab).classList.add("active");
-    if (tab.dataset.tab === "capes") openAccTab(document.querySelector(".acc-tab.active").dataset.atab);
+    if (tab.dataset.group) openAccGroup(tab.dataset.group);
+    if (tab.dataset.tab === "profiles") renderProfilesPage();
     if (tab.dataset.tab === "mods") {
       if ($("mtab-installed").classList.contains("active")) renderMods();
       else searchMods();
@@ -74,9 +76,9 @@ function updateHero() {
     $("playBtn").textContent = "LOG IN";
   } else {
     $("heroMsg").textContent = `Minecraft ${prof().version} · ${prof().loader === "fabric" ? "Fabric" : "Vanilla"}`;
-    $("playBtn").textContent = running ? "RUNNING" : "PLAY";
+    $("playBtn").textContent = launching ? "STARTING..." : gamesRunning ? `PLAY (${gamesRunning} OPEN)` : "PLAY";
   }
-  $("playBtn").disabled = running;
+  $("playBtn").disabled = launching;
 }
 
 /* Account */
@@ -368,49 +370,177 @@ function formatCount(n) {
   return n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}K` : String(n);
 }
 
+/* Modrinth browser */
+const browse = { type: "mod", categories: new Set(), page: 0, total: 0 };
+const TYPE_WORDS = { mod: "mods", modpack: "modpacks", resourcepack: "resource packs", shader: "shaders" };
+
+function timeAgo(iso) {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  if (days < 1) return "today";
+  if (days < 30) return `${days}d ago`;
+  if (days < 365) return `${Math.floor(days / 30)}mo ago`;
+  return `${Math.floor(days / 365)}y ago`;
+}
+
+async function loadCategories() {
+  const wrap = $("mbCats");
+  wrap.innerHTML = "";
+  let cats = [];
+  try { cats = await api.modrinthCategories(browse.type); } catch {}
+  for (const c of cats) {
+    const label = document.createElement("label");
+    label.className = "mb-cat";
+    label.innerHTML = `<input type="checkbox" /><span></span>`;
+    label.querySelector("span").textContent = c.replace(/-/g, " ");
+    const box = label.querySelector("input");
+    box.checked = browse.categories.has(c);
+    box.onchange = () => {
+      if (box.checked) browse.categories.add(c); else browse.categories.delete(c);
+      browse.page = 0;
+      searchMods();
+    };
+    wrap.appendChild(label);
+  }
+}
+
+document.querySelectorAll(".mb-type").forEach((b) => b.addEventListener("click", () => {
+  document.querySelectorAll(".mb-type").forEach((x) => x.classList.toggle("active", x === b));
+  browse.type = b.dataset.type;
+  browse.categories.clear();
+  browse.page = 0;
+  $("modSearch").placeholder = `Search ${TYPE_WORDS[browse.type]}...`;
+  loadCategories();
+  searchMods();
+}));
+$("mbSort").onchange = () => { browse.page = 0; searchMods(); };
+$("mbLimit").onchange = () => { browse.page = 0; searchMods(); };
+document.querySelectorAll(".mb-pages button").forEach((b) => b.addEventListener("click", () => {
+  const pages = Math.max(1, Math.ceil(browse.total / Number($("mbLimit").value)));
+  const to = { first: 0, prev: browse.page - 1, next: browse.page + 1, last: pages - 1 }[b.dataset.page];
+  if (to < 0 || to >= pages || to === browse.page) return;
+  browse.page = to;
+  searchMods();
+  $("mbScroll").scrollTop = 0;
+}));
+
+// Shared install handler for rows and trending cards
+async function installHit(h, btn) {
+  btn.disabled = true;
+  const label = btn.querySelector(".lbl");
+  label.textContent = "Installing...";
+  try {
+    const r = await api.installProject(h.id, prof().id, browse.type);
+    if (browse.type === "modpack" && r && r.profileId) {
+      await switchProfile(r.profileId);
+      setStatus(`Installed ${h.title} as the new profile "${r.name}"`);
+    }
+    label.textContent = "Installed";
+    btn.classList.add("done");
+  } catch (e) {
+    label.textContent = "Failed";
+    btn.title = cleanError(e);
+    btn.disabled = false;
+  }
+}
+
+function installButton(h, installed) {
+  const btn = document.createElement("button");
+  btn.className = "mb-install";
+  btn.innerHTML = `<span class="ico">⤓</span><span class="lbl"></span>`;
+  btn.querySelector(".lbl").textContent = installed ? "Installed" : "Install";
+  if (installed) { btn.disabled = true; btn.classList.add("done"); }
+  btn.onclick = (e) => { e.stopPropagation(); installHit(h, btn); };
+  return btn;
+}
+
+function iconEl(h, cls) {
+  if (h.icon) {
+    const img = document.createElement("img");
+    img.className = cls;
+    img.src = h.icon;
+    img.alt = "";
+    return img;
+  }
+  const span = document.createElement("span");
+  span.className = `${cls} noicon`;
+  span.textContent = h.title.charAt(0).toUpperCase();
+  return span;
+}
+
 let searchToken = 0;
 async function searchMods() {
   const token = ++searchToken;
   const wrap = $("modResults");
+  const query = $("modSearch").value.trim();
+  const limit = Number($("mbLimit").value);
   $("modsVersion").textContent = `${prof().name} (${prof().version})`;
+  $("mbVersion").textContent = `Minecraft ${prof().version}${browse.type === "mod" || browse.type === "modpack" ? " · Fabric" : ""}`;
   wrap.innerHTML = `<p class="muted">Searching...</p>`;
-  let hits;
+  let res;
   try {
-    hits = await api.searchModrinth($("modSearch").value.trim(), prof().version);
+    res = await api.browseModrinth({ type: browse.type, query, sort: $("mbSort").value, limit, offset: browse.page * limit, categories: [...browse.categories], profileId: prof().id });
   } catch (e) {
     wrap.innerHTML = `<p class="muted">Couldn't reach Modrinth: ${cleanError(e)}</p>`;
     return;
   }
   if (token !== searchToken) return;
-  const installed = (await api.listMods(prof().id)).map((m) => m.fileName.toLowerCase());
-  wrap.innerHTML = hits.length ? "" : `<p class="muted">No Fabric mods found for ${prof().version}.</p>`;
-  for (const h of hits) {
-    const el = document.createElement("div");
-    el.className = "mr";
-    el.innerHTML = `${h.icon ? `<img alt="" />` : `<span class="noicon"></span>`}<div class="info"><b></b><span class="by"></span><p></p></div><span class="dl"></span><button class="install">INSTALL</button>`;
-    if (h.icon) el.querySelector("img").src = h.icon;
-    el.querySelector("b").textContent = h.title;
-    el.querySelector(".by").textContent = `by ${h.author}`;
-    el.querySelector("p").textContent = h.description;
-    el.querySelector(".dl").textContent = `⬇ ${formatCount(h.downloads)}`;
-    const btn = el.querySelector(".install");
-    if (installed.some((n) => n.startsWith(h.slug.toLowerCase()))) {
-      btn.textContent = "INSTALLED";
-      btn.disabled = true;
-    }
-    btn.onclick = async () => {
-      btn.disabled = true;
-      btn.textContent = "...";
-      try {
-        await api.installModrinth(h.id, prof().id);
-        btn.textContent = "INSTALLED";
-      } catch (e) {
-        btn.textContent = "FAILED";
-        btn.title = cleanError(e);
-        btn.disabled = false;
+  browse.total = res.total;
+  const pages = Math.max(1, Math.ceil(res.total / limit));
+  $("mbCount").textContent = `${res.total.toLocaleString()} results`;
+  $("mbPage").textContent = `${browse.page + 1} / ${pages.toLocaleString()}`;
+
+  const installed = browse.type === "mod" ? (await api.listMods(prof().id)).map((m) => m.fileName.toLowerCase()) : [];
+  const isInstalled = (h) => installed.some((n) => n.startsWith(h.slug.toLowerCase()));
+
+  // Trending strip: the most-liked picks, only on the first page of an unfiltered browse
+  const showTrending = browse.page === 0 && !query && browse.categories.size === 0;
+  $("mbTrendingWrap").classList.toggle("hidden", !showTrending);
+  if (showTrending) {
+    api.browseModrinth({ type: browse.type, sort: "follows", limit: 4, profileId: prof().id }).then((t) => {
+      if (token !== searchToken) return;
+      const tw = $("mbTrending");
+      tw.innerHTML = "";
+      for (const h of t.hits) {
+        const card = document.createElement("div");
+        card.className = "mb-tcard";
+        const head = document.createElement("div");
+        head.className = "mb-thead";
+        head.appendChild(iconEl(h, "mb-ticon"));
+        const txt = document.createElement("div");
+        txt.className = "mb-ttext";
+        txt.innerHTML = `<b></b><small></small>`;
+        txt.querySelector("b").textContent = h.title;
+        txt.querySelector("small").textContent = h.description;
+        head.appendChild(txt);
+        card.append(head, installButton(h, isInstalled(h)));
+        tw.appendChild(card);
       }
-    };
-    wrap.appendChild(el);
+    }).catch(() => {});
+  }
+
+  wrap.innerHTML = res.hits.length ? "" : `<p class="muted">No ${TYPE_WORDS[browse.type]} found for ${prof().version}.</p>`;
+  for (const h of res.hits) {
+    const row = document.createElement("div");
+    row.className = "mb-row";
+    row.appendChild(iconEl(h, "mb-icon"));
+    const info = document.createElement("div");
+    info.className = "mb-info";
+    info.innerHTML = `<div class="mb-title"><b></b><span class="by"></span></div><p></p>`;
+    info.querySelector("b").textContent = h.title;
+    info.querySelector(".by").textContent = `by ${h.author}`;
+    info.querySelector("p").textContent = h.description;
+    const side = document.createElement("div");
+    side.className = "mb-side";
+    const stats = document.createElement("div");
+    stats.className = "mb-stats";
+    stats.innerHTML = `<span title="Downloads">⤓ <i></i></span><span title="Likes">♥ <i></i></span><span title="Last updated">◷ <i></i></span>`;
+    const [d, f, u] = stats.querySelectorAll("i");
+    d.textContent = formatCount(h.downloads);
+    f.textContent = formatCount(h.follows);
+    u.textContent = timeAgo(h.updated);
+    side.append(installButton(h, isInstalled(h)), stats);
+    row.append(info, side);
+    wrap.appendChild(row);
   }
 }
 
@@ -499,6 +629,15 @@ function openAccTab(name) {
   if (name === "capes") { renderCapes(); renderCapeLib(); }
 }
 document.querySelectorAll(".acc-tab").forEach((t) => t.addEventListener("click", () => openAccTab(t.dataset.atab)));
+
+// The Skins and Capes top tabs share one page; each shows only its own sub-tabs
+// and comes back to whichever sub-tab was open last.
+const lastAccTab = { skins: "skins", capes: "capes" };
+function openAccGroup(group) {
+  document.querySelectorAll(".acc-tab").forEach((t) => t.classList.toggle("hidden", t.dataset.group !== group));
+  openAccTab(lastAccTab[group]);
+}
+document.querySelectorAll(".acc-tab").forEach((t) => t.addEventListener("click", () => { lastAccTab[t.dataset.group] = t.dataset.atab; }));
 
 // Embedded site with a small toolbar; created on first open
 function ensureWebPane(pane) {
@@ -629,7 +768,7 @@ function libraryCard(kind, item, onUse, useLabel) {
 async function renderSkins() {
   const wrap = $("skinList");
   const list = await api.libraryList("skins");
-  wrap.innerHTML = list.length ? "" : `<p class="muted">No skins yet. Import a PNG, make one in Skin Creator, or grab one from Skin Finder.</p>`;
+  wrap.innerHTML = list.length ? "" : `<div class="lib-empty">No skins yet<small>Import a PNG, make one in Skin Creator, or grab one from Skin Finder.</small></div>`;
   for (const item of list) {
     wrap.appendChild(libraryCard("skins", item, async (btn) => {
       if (!account) { setStatus("Log in to change your skin"); return login(); }
@@ -652,7 +791,7 @@ async function renderSkins() {
 async function renderCapeLib() {
   const wrap = $("capeLib");
   const list = await api.libraryList("capes");
-  wrap.innerHTML = list.length ? "" : `<p class="muted">No saved capes yet.</p>`;
+  wrap.innerHTML = list.length ? "" : `<div class="lib-empty small">No saved capes yet<small>Save one from Cape Maker or Cape Finder.</small></div>`;
   for (const item of list) {
     wrap.appendChild(libraryCard("capes", item, () => {
       openAccTab("capefinder");
@@ -754,6 +893,7 @@ async function loadProfiles() {
   $("profileBtnName").textContent = prof().name;
   $("profileBtnSub").textContent = `${prof().version} · ${prof().loader === "fabric" ? "Fabric" : "Vanilla"}`;
   updateHero();
+  if ($("profiles").classList.contains("active")) renderProfilesPage();
 }
 
 async function switchProfile(id) {
@@ -825,31 +965,120 @@ $("profSave").onclick = async () => {
 };
 $("openFolder").onclick = () => api.openFolder();
 
+/* Profiles page */
+function lastPlayedText(ts) {
+  if (!ts) return "Never played";
+  const mins = Math.floor((Date.now() - ts) / 60000);
+  if (mins < 1) return "Played just now";
+  if (mins < 60) return `Played ${mins}m ago`;
+  if (mins < 1440) return `Played ${Math.floor(mins / 60)}h ago`;
+  return `Played ${Math.floor(mins / 1440)}d ago`;
+}
+
+async function renderProfilesPage() {
+  const grid = $("profileGrid");
+  let stats = {};
+  try { stats = await api.profileStats(); } catch {}
+  grid.innerHTML = "";
+  for (const p of profiles.list) {
+    const st = stats[p.id] || {};
+    const card = document.createElement("div");
+    card.className = `pf-card${p.id === profiles.active ? " active" : ""}`;
+    card.innerHTML = `
+      <div class="pf-top"><div class="pf-ico"></div><div class="pf-name"><b></b><small></small></div></div>
+      <div class="pf-stats"><span><i class="m"></i> mods</span><span><i class="r"></i> packs</span><span><i class="s"></i> shaders</span></div>
+      <div class="pf-last"></div>
+      <div class="pf-actions">
+        <button class="pf-play">▶ PLAY</button>
+        <button class="pf-btn" data-act="edit" title="Edit">✎</button>
+        <button class="pf-btn" data-act="dup" title="Duplicate">⧉</button>
+        <button class="pf-btn" data-act="open" title="Open folder">📁</button>
+        <button class="pf-btn danger" data-act="del" title="Delete">🗑</button>
+      </div>`;
+    card.querySelector(".pf-ico").textContent = (p.name.match(/[a-z0-9]/i) || ["?"])[0].toUpperCase();
+    card.querySelector("b").textContent = p.name;
+    card.querySelector("small").textContent = `Minecraft ${p.version} · ${p.loader === "fabric" ? "Fabric" : "Vanilla"}${p.id === profiles.active ? " · Selected" : ""}`;
+    card.querySelector(".m").textContent = st.mods ?? 0;
+    card.querySelector(".r").textContent = st.packs ?? 0;
+    card.querySelector(".s").textContent = st.shaders ?? 0;
+    card.querySelector(".pf-last").textContent = lastPlayedText(st.lastPlayed);
+
+    card.querySelector(".pf-play").onclick = async (e) => {
+      e.stopPropagation();
+      await switchProfile(p.id);
+      play(undefined, p.id);
+    };
+    card.querySelectorAll(".pf-btn").forEach((b) => (b.onclick = async (e) => {
+      e.stopPropagation();
+      const act = b.dataset.act;
+      if (act === "edit") {
+        editingProfile = p;
+        fillProfileForm(p);
+        renderProfiles();
+        openModal("versionModal");
+      } else if (act === "dup") {
+        await api.duplicateProfile(p.id);
+        await loadProfiles();
+        renderProfilesPage();
+        setStatus(`Duplicated ${p.name}`);
+      } else if (act === "open") {
+        api.openProfile(p.id);
+      } else if (act === "del") {
+        if (!confirm(`Delete the profile "${p.name}"? Its folder (mods, worlds, screenshots) goes to the Recycle Bin.`)) return;
+        try { await api.deleteProfile(p.id); } catch (err) { return setStatus(`Error: ${cleanError(err)}`); }
+        await loadProfiles();
+        renderProfilesPage();
+      }
+    }));
+    // Clicking the card itself selects the profile
+    card.onclick = async () => {
+      await switchProfile(p.id);
+      renderProfilesPage();
+      setStatus(`Selected ${p.name}`);
+    };
+    grid.appendChild(card);
+  }
+  const add = document.createElement("button");
+  add.className = "pf-card pf-new";
+  add.innerHTML = `<span>+</span><b>New profile</b>`;
+  add.onclick = () => $("profilesNewBtn").click();
+  grid.appendChild(add);
+}
+
+$("profilesNewBtn").onclick = () => {
+  editingProfile = {};
+  fillProfileForm({ name: "", version: prof().version, loader: "fabric" });
+  renderProfiles();
+  openModal("versionModal");
+  $("profName").focus();
+};
+
 /* Launch */
 function cleanError(e) {
   return (e && e.message ? e.message : String(e)).replace(/^Error invoking remote method '[^']+': (Error: )?/, "");
 }
 
-async function play(server) {
+async function play(server, profileId) {
   if (!account) return login();
-  if (running) return;
-  running = true;
+  if (launching) return;
+  launching = true;
   $("crash").classList.add("hidden");
   updateHero();
   document.querySelector('[data-tab="play"]').click();
   try {
-    await api.launch({ server });
+    await api.launch({ server, profileId });
   } catch (e) {
     setStatus(`Error: ${cleanError(e)}`);
-    running = false;
-    updateHero();
   }
+  launching = false;
+  updateHero();
 }
 
 $("playBtn").addEventListener("click", () => play());
 
 api.on("status", ({ text, progress }) => setStatus(text, progress));
-api.on("game-closed", () => { running = false; updateHero(); });
+api.on("game-started", (d) => { gamesRunning = d.running; updateHero(); });
+api.on("game-closed", (d) => { gamesRunning = d.running; updateHero(); });
 
 /* Crash screen */
 function describeFix(f) {
@@ -933,12 +1162,12 @@ document.addEventListener("keydown", (e) => {
 });
 
 /* Theme customizer */
-const DEFAULT_THEME = { mode: "dark", colors: ["#ff3b4e", "#ff7a3b"], intensity: 0, angle: 135, font: "Segoe UI", icons: "classic" };
+const DEFAULT_THEME = { mode: "dark", colors: ["#ff3b4e", "#ff7a3b"], intensity: 0, angle: 135, font: "Segoe UI", icons: "classic", buttonSize: 100 };
 const THEME_FONTS = ["Segoe UI", "Minecraft", "Bahnschrift", "Trebuchet MS", "Verdana", "Tahoma", "Georgia", "Consolas", "Lucida Console", "Franklin Gothic Medium", "Segoe Print", "Comic Sans MS", "Impact"];
 const ICON_SETS = {
-  classic: { play: "▶", mods: "▦", capes: "◭" },
-  emoji: { play: "🎮", mods: "🧩", capes: "🎨" },
-  none: { play: "", mods: "", capes: "" },
+  classic: { play: "▶", profiles: "▤", mods: "▦", skins: "☻", capes: "◭" },
+  emoji: { play: "🎮", profiles: "🗂", mods: "🧩", skins: "👕", capes: "🧣" },
+  none: { play: "", profiles: "", mods: "", skins: "", capes: "" },
 };
 const BASES = {
   dark: { bg: "#07070a", panel: "#111116", panel2: "#18181f", line: "#22222c", text: "#ececf1", muted: "#7d7d8c", card: "#0d0d12" },
@@ -985,6 +1214,7 @@ function applyTheme(t) {
   root.setProperty("--line", k ? tint(base.line, k * 0.3) : base.line);
   const stops = colors.map((c) => mix(base.bg, c, k * (t.mode === "light" ? 0.45 : 0.55)));
   root.setProperty("--bg-image", k ? `linear-gradient(${t.angle}deg, ${stops.length > 1 ? stops.join(", ") : `${stops[0]}, ${base.bg}`})` : "none");
+  root.setProperty("--btn-zoom", String((t.buttonSize || 100) / 100));
   root.setProperty("--font", `"${t.font}", "Segoe UI", system-ui, sans-serif`);
   document.body.classList.toggle("light", t.mode === "light");
 
@@ -1019,6 +1249,8 @@ function syncThemeForm() {
   $("tpIntensityLabel").textContent = `${draft.intensity}%`;
   $("tpAngle").value = draft.angle;
   $("tpAngleLabel").textContent = `${draft.angle}°`;
+  $("tpButtons").value = draft.buttonSize || 100;
+  $("tpButtonsLabel").textContent = `${draft.buttonSize || 100}%`;
   $("tpFont").value = draft.font;
   $("tpAddColor").disabled = draft.colors.length >= 4;
   renderStops();
@@ -1103,6 +1335,7 @@ $("tpFont").onchange = () => { draft.font = $("tpFont").value; applyTheme(draft)
 document.querySelectorAll("#tpMode button").forEach((b) => (b.onclick = () => { draft.mode = b.dataset.mode; syncThemeForm(); }));
 document.querySelectorAll("#tpIcons button").forEach((b) => (b.onclick = () => { draft.icons = b.dataset.icons; syncThemeForm(); }));
 $("tpIntensity").oninput = () => { draft.intensity = Number($("tpIntensity").value); $("tpIntensityLabel").textContent = `${draft.intensity}%`; applyTheme(draft); };
+$("tpButtons").oninput = () => { draft.buttonSize = Number($("tpButtons").value); $("tpButtonsLabel").textContent = `${draft.buttonSize}%`; applyTheme(draft); };
 $("tpAngle").oninput = () => { draft.angle = Number($("tpAngle").value); $("tpAngleLabel").textContent = `${draft.angle}°`; applyTheme(draft); };
 $("tpAddColor").onclick = () => {
   if (draft.colors.length >= 4) return;
@@ -1168,6 +1401,7 @@ The launcher will download it and restart into the installer.`)) return;
   renderNews();
   checkForUpdate();
   importSavedServers();
+  loadCategories();
   renderServers();
   renderAccount();
 

@@ -661,6 +661,22 @@ ipcMain.handle("profiles:delete", (_e, id) => {
 
 ipcMain.handle("profiles:open", (_e, id) => shell.openPath(instanceDir(id)));
 
+// Quick counts for the Profiles page (file counts only, no jar reading)
+ipcMain.handle("profiles:stats", () => {
+  const count = (dir, re) => { try { return fs.readdirSync(dir).filter((f) => re.test(f)).length; } catch { return 0; } };
+  const out = {};
+  for (const p of loadProfiles().list) {
+    const base = path.join(ROOT, "instances", p.id);
+    out[p.id] = {
+      mods: count(path.join(base, "mods"), /.jar$/i),
+      packs: count(path.join(base, "resourcepacks"), /.zip$/i),
+      shaders: count(path.join(base, "shaderpacks"), /.zip$/i),
+      lastPlayed: p.lastPlayed || null,
+    };
+  }
+  return out;
+});
+
 ipcMain.handle("versions", async () => {
   const manifest = await getJson("https://piston-meta.mojang.com/mc/game/version_manifest_v2.json");
   return manifest.versions.filter((v) => v.type === "release").map((v) => v.id);
@@ -973,6 +989,82 @@ ipcMain.handle("modrinth:search", async (_e, query, version) => {
   return r.hits.map((h) => ({ id: h.project_id, slug: h.slug, title: h.title, description: h.description, icon: h.icon_url, downloads: h.downloads, author: h.author }));
 });
 
+/* Modrinth browser: mods, modpacks, resource packs and shaders */
+
+const MODRINTH_TYPES = { mod: "mod", modpack: "modpack", resourcepack: "resourcepack", shader: "shader" };
+const MODRINTH_SORTS = new Set(["relevance", "downloads", "follows", "newest", "updated"]);
+
+ipcMain.handle("modrinth:browse", async (_e, opts = {}) => {
+  const type = MODRINTH_TYPES[opts.type] || "mod";
+  const version = mcVersionOf(opts.profileId || activeProfile().id);
+  const facets = [[`project_type:${type}`], [`versions:${version}`]];
+  // Mods and modpacks must be Fabric; packs and shaders work with any loader
+  if (type === "mod" || type === "modpack") facets.push(["categories:fabric"]);
+  for (const c of opts.categories || []) facets.push([`categories:${c}`]);
+  const sort = MODRINTH_SORTS.has(opts.sort) ? opts.sort : (opts.query ? "relevance" : "downloads");
+  const limit = Math.min(50, Math.max(1, opts.limit || 20));
+  const offset = Math.max(0, opts.offset || 0);
+  const url = `https://api.modrinth.com/v2/search?query=${encodeURIComponent(opts.query || "")}&facets=${encodeURIComponent(JSON.stringify(facets))}&index=${sort}&limit=${limit}&offset=${offset}`;
+  const r = await getJson(url);
+  return {
+    total: r.total_hits,
+    version,
+    hits: r.hits.map((h) => ({
+      id: h.project_id, slug: h.slug, title: h.title, description: h.description, icon: h.icon_url,
+      downloads: h.downloads, follows: h.follows, author: h.author, updated: h.date_modified, type: h.project_type,
+    })),
+  };
+});
+
+let categoryCache = null;
+ipcMain.handle("modrinth:categories", async (_e, type) => {
+  if (!categoryCache) categoryCache = await getJson("https://api.modrinth.com/v2/tag/category");
+  const t = MODRINTH_TYPES[type] || "mod";
+  return categoryCache
+    .filter((c) => c.project_type === t && c.header === "categories")
+    .map((c) => c.name)
+    .sort();
+});
+
+// Resource packs and shaders: newest file for this Minecraft version into the right folder
+async function installPack(projectId, profileId, type) {
+  const version = mcVersionOf(profileId);
+  const q = encodeURIComponent(JSON.stringify([version]));
+  const versions = await getJson(`https://api.modrinth.com/v2/project/${projectId}/version?game_versions=${q}`);
+  if (!versions.length) throw new Error(`Nothing for ${version}`);
+  const file = versions[0].files.find((f) => f.primary) || versions[0].files[0];
+  const dir = instanceDir(profileId, type === "shader" ? "shaderpacks" : "resourcepacks");
+  await download(file.url, path.join(dir, path.basename(file.filename)));
+  log(`[modrinth] installed ${file.filename}`);
+  return { file: file.filename };
+}
+
+// Modpacks become a new profile, imported from their .mrpack
+async function installModpack(projectId, profileId) {
+  const version = mcVersionOf(profileId);
+  const q = encodeURIComponent(JSON.stringify([version]));
+  let versions = await getJson(`https://api.modrinth.com/v2/project/${projectId}/version?loaders=%5B%22fabric%22%5D&game_versions=${q}`);
+  if (!versions.length) versions = await getJson(`https://api.modrinth.com/v2/project/${projectId}/version?loaders=%5B%22fabric%22%5D`);
+  if (!versions.length) throw new Error("No Fabric version of this modpack");
+  const file = versions[0].files.find((f) => f.primary && f.filename.endsWith(".mrpack")) || versions[0].files.find((f) => f.filename.endsWith(".mrpack"));
+  if (!file) throw new Error("This modpack has no .mrpack file");
+  const tmp = path.join(os.tmpdir(), `fracture-${Date.now()}-${path.basename(file.filename)}`);
+  status("Downloading modpack...", 0);
+  await download(file.url, tmp, (p) => status("Downloading modpack...", p));
+  try {
+    return await importArchive(tmp, profileId);
+  } finally {
+    fs.rmSync(tmp, { force: true });
+  }
+}
+
+ipcMain.handle("modrinth:installType", async (_e, projectId, profileId, type) => {
+  if (type === "modpack") return installModpack(projectId, profileId);
+  if (type === "resourcepack" || type === "shader") return installPack(projectId, profileId, type);
+  await installModrinth(projectId, profileId);
+  return {};
+});
+
 // Installs the newest Fabric build of a project for this version, plus its required dependencies
 async function installModrinth(projectId, version, seen = new Set()) {
   if (seen.has(projectId)) return;
@@ -1266,14 +1358,18 @@ async function freshAccount() {
   return mc.mclc();
 }
 
-let running = false;
+// Several games can run at once (any profile, even the same one twice)
+let gamesRunning = 0;
 
-ipcMain.handle("launch", async (_e, { server }) => {
-  if (running) throw new Error("Minecraft is already running");
-  running = true;
+ipcMain.handle("launch", async (_e, { server, profileId } = {}) => {
   try {
     const s = { ...DEFAULT_SETTINGS, ...readJson(SETTINGS_FILE, {}) };
-    const profile = activeProfile();
+    const profile = (profileId && profileById(profileId)) || activeProfile();
+    {
+      const data = loadProfiles();
+      const entry = data.list.find((p) => p.id === profile.id);
+      if (entry) { entry.lastPlayed = Date.now(); saveProfiles(data); }
+    }
     s.version = profile.version;
     s.loader = profile.loader;
     status("Signing in...", null);
@@ -1300,7 +1396,8 @@ ipcMain.handle("launch", async (_e, { server }) => {
       window: s.fullscreen ? { fullscreen: true } : { width: s.width, height: s.height },
       // fabric.noGui: report mod errors in the log instead of Fabric's popup, so we can offer a fix
       customArgs: ["-Dfabric.noGui=true", ...s.jvmArgs.split(/\s+/).filter(Boolean)],
-      overrides: { gameDirectory: instanceDir, detached: false },
+      // Detached so the game keeps running if the launcher is closed or restarted
+      overrides: { gameDirectory: instanceDir, detached: true },
     };
     if (server) {
       const [host, port] = server.split(":");
@@ -1318,8 +1415,9 @@ ipcMain.handle("launch", async (_e, { server }) => {
     });
     launcher.on("progress", (p) => status(`Downloading ${p.type}...`, p.total ? p.task / p.total : null));
     launcher.on("close", (code) => {
-      running = false;
-      win.webContents.send("game-closed");
+      gamesRunning = Math.max(0, gamesRunning - 1);
+      if (win.isDestroyed()) return;
+      win.webContents.send("game-closed", { running: gamesRunning });
       if (code !== 0 && code !== null) {
         const fixes = analyzeCrash(output);
         lastCrash = { version: profile.id, fixes };
@@ -1328,19 +1426,19 @@ ipcMain.handle("launch", async (_e, { server }) => {
         win.webContents.send("game-crashed", { fixes });
         return;
       }
-      status(`Game closed (code ${code})`, null);
-      if (s.closeOnLaunch) app.quit();
+      status(gamesRunning ? `${profile.name} closed · ${gamesRunning} still running` : `Game closed (code ${code})`, null);
+      if (s.closeOnLaunch && gamesRunning === 0) app.quit();
     });
 
     status("Launching...", null);
     const proc = await launcher.launch(opts);
     if (!proc) throw new Error("Launch failed, check the console for details");
-    status("Playing", null);
-    win.webContents.send("game-started");
+    gamesRunning++;
+    status(gamesRunning > 1 ? `Playing ${gamesRunning} games` : `Playing ${profile.name}`, null);
+    win.webContents.send("game-started", { running: gamesRunning });
     if (s.closeOnLaunch) win.hide();
     return true;
   } catch (e) {
-    running = false;
     status(`Error: ${e.message}`, null);
     throw e;
   }

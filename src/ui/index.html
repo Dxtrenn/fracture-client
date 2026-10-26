@@ -29,8 +29,10 @@
     <div class="top-right">
       <nav class="tabs">
         <button class="tab active" data-tab="play"><span class="ti" data-i="play">▶</span> Play</button>
+        <button class="tab" data-tab="profiles"><span class="ti" data-i="profiles">▤</span> Profiles</button>
         <button class="tab" data-tab="mods"><span class="ti" data-i="mods">▦</span> Mods</button>
-        <button class="tab" data-tab="capes"><span class="ti" data-i="capes">◭</span> Accessories</button>
+        <button class="tab" data-tab="capes" data-group="skins"><span class="ti" data-i="skins">☻</span> Skins</button>
+        <button class="tab" data-tab="capes" data-group="capes"><span class="ti" data-i="capes">◭</span> Capes</button>
       </nav>
       <button class="update-btn hidden" id="updateBtn" title="A new version is available">⬇ UPDATE FRACTURE</button>
       <button class="account-chip" id="accountChip">
@@ -89,6 +91,18 @@
         </div>
       </section>
 
+      <!-- PROFILES -->
+      <section id="profiles" class="page">
+        <div class="card full">
+          <div class="card-head">
+            <h3>PROFILES</h3>
+            <button class="pill" id="profilesNewBtn">+ NEW PROFILE</button>
+          </div>
+          <p class="muted" style="margin:-4px 0 12px">Each profile has its own version, mods, packs and settings. Run as many as you like at the same time.</p>
+          <div id="profileGrid" class="pf-grid"></div>
+        </div>
+      </section>
+
       <!-- MODS -->
       <section id="mods" class="page">
         <div class="card full">
@@ -104,8 +118,45 @@
             </div>
           </div>
           <div id="mtab-browse" class="mtab active">
-            <input id="modSearch" class="mod-search" placeholder="Search Modrinth mods..." />
-            <div id="modResults" class="mod-results"></div>
+            <div class="mb-top">
+              <div class="mb-types">
+                <button class="mb-type active" data-type="mod">Mods</button>
+                <button class="mb-type" data-type="modpack">Modpacks</button>
+                <button class="mb-type" data-type="resourcepack">Resource Packs</button>
+                <button class="mb-type" data-type="shader">Shaders</button>
+              </div>
+              <label class="mb-search"><span>⌕</span><input id="modSearch" placeholder="Search Modrinth..." /></label>
+            </div>
+            <div class="mb-body">
+              <aside class="mb-filters">
+                <h4>Filters</h4>
+                <div class="mb-note">Showing results for<br /><b id="mbVersion"></b></div>
+                <h5>Category</h5>
+                <div id="mbCats" class="mb-cats"></div>
+              </aside>
+              <div class="mb-main">
+                <div class="mb-bar">
+                  <select id="mbSort">
+                    <option value="relevance">Relevance</option>
+                    <option value="downloads" selected>Downloads</option>
+                    <option value="follows">Most liked</option>
+                    <option value="newest">Newest</option>
+                    <option value="updated">Recently updated</option>
+                  </select>
+                  <select id="mbLimit"><option>10</option><option selected>20</option><option>50</option></select>
+                  <span id="mbCount" class="muted"></span>
+                  <div class="mb-pages">
+                    <button data-page="first" title="First page">«</button><button data-page="prev" title="Previous page">‹</button>
+                    <span id="mbPage">1 / 1</span>
+                    <button data-page="next" title="Next page">›</button><button data-page="last" title="Last page">»</button>
+                  </div>
+                </div>
+                <div id="mbScroll" class="mb-scroll">
+                  <div id="mbTrendingWrap"><h5 class="mb-h">Trending</h5><div id="mbTrending" class="mb-trending"></div></div>
+                  <div id="modResults" class="mb-results"></div>
+                </div>
+              </div>
+            </div>
           </div>
           <div id="mtab-installed" class="mtab">
             <div id="modList" class="mod-list"></div>
@@ -128,15 +179,13 @@
         <div class="card full">
           <div class="card-head acc-head">
             <div class="mod-tabs acc-tabs">
-              <span class="acc-group">SKINS</span>
-              <button class="acc-tab active" data-atab="skins">MY SKINS</button>
-              <button class="acc-tab" data-atab="skinmaker">SKIN CREATOR</button>
-              <button class="acc-tab" data-atab="skinfinder">SKIN FINDER</button>
-              <span class="acc-group">CAPES</span>
-              <button class="acc-tab" data-atab="capes">MY CAPES</button>
-              <button class="acc-tab" data-atab="capemaker">CAPE MAKER</button>
-              <button class="acc-tab" data-atab="capefinder">CAPE FINDER</button>
-              <button class="acc-tab" data-atab="shop">SHOP</button>
+                            <button class="acc-tab active" data-group="skins" data-atab="skins">MY SKINS</button>
+              <button class="acc-tab" data-group="skins" data-atab="skinmaker">SKIN CREATOR</button>
+              <button class="acc-tab" data-group="skins" data-atab="skinfinder">SKIN FINDER</button>
+                            <button class="acc-tab" data-group="capes" data-atab="capes">MY CAPES</button>
+              <button class="acc-tab" data-group="capes" data-atab="capemaker">CAPE MAKER</button>
+              <button class="acc-tab" data-group="capes" data-atab="capefinder">CAPE FINDER</button>
+              <button class="acc-tab" data-group="capes" data-atab="shop">SHOP</button>
             </div>
           </div>
 
@@ -209,6 +258,8 @@
           <input type="range" id="tpIntensity" min="0" max="100" value="0" />
           <div class="tp-row"><span>Gradient Angle</span><b id="tpAngleLabel">135°</b></div>
           <input type="range" id="tpAngle" min="0" max="360" value="135" />
+          <div class="tp-row"><span>Button Size</span><b id="tpButtonsLabel">100%</b></div>
+          <input type="range" id="tpButtons" min="80" max="150" step="5" value="100" />
 
           <h4>Font</h4>
           <select id="tpFont"></select>
