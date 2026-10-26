@@ -27,6 +27,7 @@ const DEFAULT_SETTINGS = {
   pvpMods: true,
   jvmArgs: "-XX:+UseG1GC -XX:+UnlockExperimentalVMOptions -XX:G1NewSizePercent=20 -XX:MaxGCPauseMillis=50",
   closeOnLaunch: false,
+  fractureMod: true,
 };
 
 let win;
@@ -213,6 +214,32 @@ async function ensureMods(version) {
     } catch (e) {
       log(`[mods] ${slug}: ${e.message}`);
     }
+  }
+}
+
+/* Fracture in-game mod (Right Shift menu), shipped inside the launcher */
+
+const FRACTURE_MOD_VERSIONS = ["1.21.11"];
+const FRACTURE_MOD_FILE = "fracture-mod.jar";
+
+function bundledFractureMod() {
+  const packaged = path.join(process.resourcesPath || "", FRACTURE_MOD_FILE);
+  if (fs.existsSync(packaged)) return packaged;
+  const dev = path.join(__dirname, "..", "resources", FRACTURE_MOD_FILE);
+  return fs.existsSync(dev) ? dev : null;
+}
+
+function ensureFractureMod(profile) {
+  if (profile.loader !== "fabric" || !FRACTURE_MOD_VERSIONS.includes(profile.version)) return;
+  const src = bundledFractureMod();
+  if (!src) return;
+  const dir = modsDir(profile.id);
+  const dest = path.join(dir, FRACTURE_MOD_FILE);
+  // Respect the user turning it off in the Installed tab
+  if (fs.existsSync(`${dest}.disabled`)) return;
+  if (!fs.existsSync(dest) || fs.statSync(dest).size !== fs.statSync(src).size) {
+    fs.copyFileSync(src, dest);
+    log("[fracture] installed the Fracture in-game menu (Right Shift)");
   }
 }
 
@@ -1150,6 +1177,7 @@ ipcMain.handle("launch", async (_e, { server }) => {
     if (useFabric) {
       custom = await ensureFabric(s.version);
       if (s.pvpMods) await ensureMods(profile.id);
+      if (s.fractureMod !== false) ensureFractureMod(profile);
     }
 
     const instanceDir = path.join(ROOT, "instances", profile.id);

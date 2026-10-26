@@ -1104,6 +1104,7 @@ $("tpApply").onclick = () => closeThemePanel(true);
   bindSetting("height", "height");
   bindSetting("fullscreen", "fullscreen", "checked");
   bindSetting("pvpMods", "pvpMods", "checked");
+  bindSetting("fractureMod", "fractureMod", "checked");
   bindSetting("closeOnLaunch", "closeOnLaunch", "checked");
   bindSetting("jvmArgs", "jvmArgs");
   saveSettings();

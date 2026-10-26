@@ -41,6 +41,12 @@
     "electronVersion": "38.8.6+wvcus",
     "electronDownload": {
       "mirror": "https://github.com/castlabs/electron-releases/releases/download/v"
-    }
+    },
+    "extraResources": [
+      {
+        "to": "fracture-mod.jar",
+        "from": "resources/fracture-mod.jar"
+      }
+    ]
   }
 }
