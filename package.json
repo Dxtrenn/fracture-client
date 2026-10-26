@@ -62,7 +62,7 @@
       ],
       "icon": "build/icon.png",
       "category": "public.app-category.games",
-      "identity": null,
+      "identity": "-",
       "artifactName": "Fracture-Client-${version}-mac-${arch}.${ext}"
     },
     "dmg": {

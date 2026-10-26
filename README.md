@@ -14,7 +14,7 @@ A Minecraft PvP launcher for Windows and macOS.
 
 Grab the latest `Fracture Client Setup.exe` from the [Releases](../../releases) page.
 - **Windows:** `Fracture-Client-Setup-x.y.z.exe`. SmartScreen may warn because the installer isn't code-signed: click **More info → Run anyway**.
-- **macOS:** `…-mac-arm64.dmg` for Apple Silicon (M1/M2/M3/M4), `…-mac-x64.dmg` for Intel Macs. Drag the app to Applications, then the first time **right-click it → Open → Open** (the app isn't notarized by Apple yet).
+- **macOS:** `…-mac-arm64.dmg` for Apple Silicon (M1/M2/M3/M4), `…-mac-x64.dmg` for Intel Macs. Drag the app to Applications, then the first time **right-click it → Open → Open** (the app isn't notarized by Apple yet). If macOS says the app "is damaged", run `xattr -cr "/Applications/Fracture Client.app"` in Terminal and open it again.
 
 ## Building from source
 
