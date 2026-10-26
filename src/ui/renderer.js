@@ -31,6 +31,39 @@ function saveServers(list) {
   try { localStorage.setItem("servers", JSON.stringify(list)); } catch {}
 }
 
+/* Styled confirm dialog (replaces the plain Windows popup) */
+let dlgResolve = null;
+function ask({ title, message = "", ok = "OK", danger = false, icon }) {
+  if (dlgResolve) dlgResolve(false);
+  $("dlgTitle").textContent = title;
+  $("dlgMsg").textContent = message;
+  $("dlgMsg").classList.toggle("hidden", !message);
+  $("dlgOk").textContent = ok;
+  $("dlgOk").classList.toggle("danger", danger);
+  $("dlgIcon").textContent = icon || (danger ? "🗑" : "?");
+  $("dlgIcon").classList.toggle("danger", danger);
+  $("dlg").classList.remove("hidden");
+  requestAnimationFrame(() => $("dlg").classList.add("show"));
+  setTimeout(() => $(danger ? "dlgCancel" : "dlgOk").focus(), 50);
+  return new Promise((resolve) => (dlgResolve = resolve));
+}
+function closeDialog(result) {
+  if (!dlgResolve) return;
+  const r = dlgResolve;
+  dlgResolve = null;
+  $("dlg").classList.remove("show");
+  setTimeout(() => $("dlg").classList.add("hidden"), 150);
+  r(result);
+}
+$("dlgOk").onclick = () => closeDialog(true);
+$("dlgCancel").onclick = () => closeDialog(false);
+$("dlg").addEventListener("mousedown", (e) => { if (e.target === $("dlg")) closeDialog(false); });
+document.addEventListener("keydown", (e) => {
+  if (!dlgResolve) return;
+  if (e.key === "Escape") { e.preventDefault(); closeDialog(false); }
+  if (e.key === "Enter") { e.preventDefault(); closeDialog(document.activeElement !== $("dlgCancel")); }
+}, true);
+
 /* Window + navigation */
 document.querySelectorAll("[data-win]").forEach((b) => b.addEventListener("click", () => api.window(b.dataset.win)));
 
@@ -128,7 +161,7 @@ async function renderSwitcher() {
     };
     el.querySelector(".rm").onclick = async (e) => {
       e.stopPropagation();
-      if (!confirm(`Remove ${a.name}?`)) return;
+      if (!(await ask({ title: `Remove ${a.name}?`, message: "You'll need to sign in again to use this account.", ok: "Remove", danger: true }))) return;
       await api.removeAccount(a.uuid);
       await renderAccount();
       renderSwitcher();
@@ -347,7 +380,7 @@ async function renderMods() {
       renderMods();
     };
     el.querySelector(".del").onclick = async () => {
-      if (!confirm(`Delete ${m.name}?`)) return;
+      if (!(await ask({ title: `Delete ${m.name}?`, message: "The mod is removed from this profile.", ok: "Delete", danger: true }))) return;
       await api.deleteMod(prof().id, m.file);
       renderMods();
     };
@@ -757,7 +790,7 @@ function libraryCard(kind, item, onUse, useLabel) {
   use.onclick = () => onUse(use);
   el.querySelector("[data-act=export]").onclick = () => api.libraryExport(kind, item.id);
   el.querySelector("[data-act=del]").onclick = async () => {
-    if (!confirm(`Delete ${item.name}?`)) return;
+    if (!(await ask({ title: `Delete ${item.name}?`, message: "It's removed from your library.", ok: "Delete", danger: true }))) return;
     await api.libraryDelete(kind, item.id);
     if (kind === "skins") renderSkins();
     else renderCapeLib();
@@ -927,7 +960,7 @@ function renderProfiles() {
       if (act === "dup") { await api.duplicateProfile(p.id); await loadProfiles(); setStatus(`Duplicated ${p.name}`); return renderProfiles(); }
       if (act === "open") return api.openProfile(p.id);
       if (act === "del") {
-        if (!confirm(`Delete the profile "${p.name}"? Its folder (mods, worlds, screenshots) goes to the Recycle Bin.`)) return;
+        if (!(await ask({ title: `Delete "${p.name}"?`, message: "Its mods, worlds and screenshots go to the Recycle Bin, so you can still get them back.", ok: "Delete profile", danger: true }))) return;
         try { await api.deleteProfile(p.id); } catch (err) { return setStatus(`Error: ${cleanError(err)}`); }
         await loadProfiles();
         return renderProfiles();
@@ -1024,7 +1057,7 @@ async function renderProfilesPage() {
       } else if (act === "open") {
         api.openProfile(p.id);
       } else if (act === "del") {
-        if (!confirm(`Delete the profile "${p.name}"? Its folder (mods, worlds, screenshots) goes to the Recycle Bin.`)) return;
+        if (!(await ask({ title: `Delete "${p.name}"?`, message: "Its mods, worlds and screenshots go to the Recycle Bin, so you can still get them back.", ok: "Delete profile", danger: true }))) return;
         try { await api.deleteProfile(p.id); } catch (err) { return setStatus(`Error: ${cleanError(err)}`); }
         await loadProfiles();
         renderProfilesPage();
@@ -1368,9 +1401,7 @@ async function checkForUpdate() {
   btn.classList.remove("hidden");
   btn.title = `Version ${u.version} is out (you have ${u.current})`;
   btn.onclick = async () => {
-    if (!confirm(`Update Fracture Client to version ${u.version}?
-
-The launcher will download it and restart into the installer.`)) return;
+    if (!(await ask({ title: `Update to version ${u.version}?`, message: "The launcher downloads it and restarts into the installer. Your profiles and mods stay.", ok: "Update", icon: "⬇" }))) return;
     btn.disabled = true;
     btn.textContent = "DOWNLOADING...";
     try {
