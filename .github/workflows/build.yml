@@ -19,10 +19,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # One .dmg per job: hdiutil on the runners often fails when making two in a row
           - os: macos-latest
-            args: --mac dmg --x64 --arm64
+            name: mac-arm64
+            args: --mac dmg --arm64
+            files: dist/*.dmg
+          - os: macos-latest
+            name: mac-x64
+            args: --mac dmg --x64
             files: dist/*.dmg
           - os: windows-latest
+            name: windows
             args: --win nsis
             files: dist/*.exe
     runs-on: ${{ matrix.os }}
@@ -51,7 +58,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: fracture-client-${{ matrix.os }}
+          name: fracture-client-${{ matrix.name }}
           path: ${{ matrix.files }}
           if-no-files-found: error
 
