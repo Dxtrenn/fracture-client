@@ -782,6 +782,60 @@ ipcMain.handle("open-external", (_e, url) => {
 
 ipcMain.handle("open-folder", () => shell.openPath(ROOT));
 
+/* Self-update from GitHub releases */
+
+const RELEASES_API = "https://api.github.com/repos/Dxtrenn/fracture-client/releases/latest";
+let pendingUpdate = null;
+
+function newerVersion(a, b) {
+  const pa = String(a).replace(/^v/, "").split(".").map((n) => parseInt(n, 10) || 0);
+  const pb = String(b).replace(/^v/, "").split(".").map((n) => parseInt(n, 10) || 0);
+  for (let i = 0; i < 3; i++) {
+    if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) > (pb[i] || 0);
+  }
+  return false;
+}
+
+// The installer for this computer among a release's files
+function pickAsset(assets) {
+  if (IS_WIN) return assets.find((a) => /\.exe$/i.test(a.name));
+  if (IS_MAC) {
+    const arch = process.arch === "arm64" ? "arm64" : "x64";
+    return assets.find((a) => a.name.endsWith(".dmg") && a.name.includes(`mac-${arch}`)) || assets.find((a) => a.name.endsWith(".dmg"));
+  }
+  return null;
+}
+
+ipcMain.handle("update:check", async () => {
+  const current = app.getVersion();
+  try {
+    const rel = await getJson(RELEASES_API);
+    const asset = pickAsset(rel.assets || []);
+    if (!rel.tag_name || !asset || !newerVersion(rel.tag_name, current)) return { available: false, current };
+    pendingUpdate = { version: rel.tag_name.replace(/^v/, ""), url: asset.browser_download_url, name: asset.name, notes: rel.body || "" };
+    return { available: true, current, version: pendingUpdate.version, notes: pendingUpdate.notes };
+  } catch {
+    return { available: false, current };
+  }
+});
+
+ipcMain.handle("update:install", async () => {
+  if (!pendingUpdate) throw new Error("No update found");
+  const dest = path.join(app.getPath("downloads"), pendingUpdate.name);
+  status(`Downloading Fracture ${pendingUpdate.version}...`, 0);
+  await download(pendingUpdate.url, dest, (p) => status(`Downloading Fracture ${pendingUpdate.version}...`, p));
+  if (IS_WIN) {
+    // Run the installer on its own and close the launcher so it can replace the files
+    status("Starting the installer...", null);
+    require("child_process").spawn(dest, [], { detached: true, stdio: "ignore" }).unref();
+    setTimeout(() => app.quit(), 800);
+  } else {
+    status("Update downloaded. Drag Fracture Client into Applications to finish.", null);
+    shell.openPath(dest);
+  }
+  return true;
+});
+
 // News posts are published to the GitHub repo by the Fracture News Editor app
 const NEWS_URL = "https://raw.githubusercontent.com/dxtrenn/fracture-client/main/news.json";
 

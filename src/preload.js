@@ -25,6 +25,8 @@ contextBridge.exposeInMainWorld("fractur", {
   duplicateProfile: (id) => ipcRenderer.invoke("profiles:duplicate", id),
   deleteProfile: (id) => ipcRenderer.invoke("profiles:delete", id),
   openProfile: (id) => ipcRenderer.invoke("profiles:open", id),
+  checkUpdate: () => ipcRenderer.invoke("update:check"),
+  installUpdate: () => ipcRenderer.invoke("update:install"),
   getNews: () => ipcRenderer.invoke("news:get"),
   openNewsLink: (url) => ipcRenderer.invoke("news:open", url),
   fixCrash: () => ipcRenderer.invoke("crash:fix"),

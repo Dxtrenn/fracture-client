@@ -43,6 +43,13 @@ jobs:
 
       - run: npm ci
 
+      # Release builds take their version from the tag (v1.2.3 -> 1.2.3), which the
+      # launcher compares against the latest release to offer UPDATE FRACTURE
+      - name: Use release version
+        if: github.event_name == 'release'
+        shell: bash
+        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
+
       - name: Build
         shell: bash
         # On failure, repeat the last log lines as annotations so they show without signing in

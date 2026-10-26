@@ -1094,6 +1094,30 @@ $("themeClose").onclick = () => closeThemePanel(false);
 $("tpBack").onclick = () => closeThemePanel(false);
 $("tpApply").onclick = () => closeThemePanel(true);
 
+/* Updates */
+async function checkForUpdate() {
+  const u = await api.checkUpdate();
+  const btn = $("updateBtn");
+  if (!u.available) return;
+  btn.classList.remove("hidden");
+  btn.title = `Version ${u.version} is out (you have ${u.current})`;
+  btn.onclick = async () => {
+    if (!confirm(`Update Fracture Client to version ${u.version}?
+
+The launcher will download it and restart into the installer.`)) return;
+    btn.disabled = true;
+    btn.textContent = "DOWNLOADING...";
+    try {
+      await api.installUpdate();
+      btn.textContent = "INSTALLING...";
+    } catch (e) {
+      setStatus(`Update failed: ${cleanError(e)}`);
+      btn.disabled = false;
+      btn.textContent = "⬇ UPDATE FRACTURE";
+    }
+  };
+}
+
 /* Init */
 (async function init() {
   settings = await api.getSettings();
@@ -1110,6 +1134,7 @@ $("tpApply").onclick = () => closeThemePanel(true);
   bindSetting("jvmArgs", "jvmArgs");
   saveSettings();
   renderNews();
+  checkForUpdate();
   renderServers();
   renderAccount();
 

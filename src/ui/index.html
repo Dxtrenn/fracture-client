@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -28,20 +28,21 @@
     </div>
     <div class="top-right">
       <nav class="tabs">
-        <button class="tab active" data-tab="play"><span class="ti" data-i="play">â–¶</span> Play</button>
-        <button class="tab" data-tab="mods"><span class="ti" data-i="mods">â–¦</span> Mods</button>
-        <button class="tab" data-tab="capes"><span class="ti" data-i="capes">â—­</span> Accessories</button>
+        <button class="tab active" data-tab="play"><span class="ti" data-i="play">▶</span> Play</button>
+        <button class="tab" data-tab="mods"><span class="ti" data-i="mods">▦</span> Mods</button>
+        <button class="tab" data-tab="capes"><span class="ti" data-i="capes">◭</span> Accessories</button>
       </nav>
+      <button class="update-btn hidden" id="updateBtn" title="A new version is available">⬇ UPDATE FRACTURE</button>
       <button class="account-chip" id="accountChip">
         <img id="chipHead" alt="" />
         <div><small id="chipSub">Not signed in</small><b id="chipName">Guest User</b></div>
       </button>
-      <button class="icon-btn" id="themeBtn" title="Customize your theme">âœŽ</button>
+      <button class="icon-btn" id="themeBtn" title="Customize your theme">✎</button>
       <button class="icon-btn" id="consoleBtn" title="Console">&gt;_</button>
-      <button class="icon-btn" id="settingsBtn" title="Settings">âš™</button>
-      <button class="icon-btn" data-win="min" title="Minimize">â€”</button>
-      <button class="icon-btn" data-win="max" title="Maximize">â˜</button>
-      <button class="icon-btn close" data-win="close" title="Close">âœ•</button>
+      <button class="icon-btn" id="settingsBtn" title="Settings">⚙</button>
+      <button class="icon-btn" data-win="min" title="Minimize">—</button>
+      <button class="icon-btn" data-win="max" title="Maximize">☐</button>
+      <button class="icon-btn close" data-win="close" title="Close">✕</button>
     </div>
   </header>
 
@@ -64,7 +65,7 @@
             <p id="heroMsg">You're not logged in. Log in to start using Fracture.</p>
             <div class="hero-actions">
               <button id="playBtn" class="play">PLAY</button>
-              <button id="profileBtn" class="ghost profile-btn"><span class="pb-text"><b id="profileBtnName">Profile</b><small id="profileBtnSub"></small></span><span class="pb-caret">â–¾</span></button>
+              <button id="profileBtn" class="ghost profile-btn"><span class="pb-text"><b id="profileBtnName">Profile</b><small id="profileBtnSub"></small></span><span class="pb-caret">▾</span></button>
             </div>
             <div class="status">
               <div id="statusText">Ready</div>
@@ -98,7 +99,7 @@
               <button class="mod-tab" data-mtab="import">IMPORT PROFILE</button>
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              <span class="muted">Fabric Â· <b id="modsVersion"></b></span>
+              <span class="muted">Fabric · <b id="modsVersion"></b></span>
               <button class="pill" id="openModsBtn">OPEN FOLDER</button>
             </div>
           </div>
@@ -189,24 +190,24 @@
         <div id="sideName" class="side-name"></div>
       </div>
       <div class="switcher theme-panel" id="themePanel">
-        <div class="sw-head"><h2>Customize your theme âœŽ</h2><button class="icon-btn" id="themeClose">âœ•</button></div>
+        <div class="sw-head"><h2>Customize your theme ✎</h2><button class="icon-btn" id="themeClose">✕</button></div>
         <div class="tp-body">
           <h4>Appearance</h4>
           <div class="seg" id="tpMode">
-            <button data-mode="dark" class="active" title="Dark">â˜¾</button>
-            <button data-mode="light" title="Light">â˜€</button>
+            <button data-mode="dark" class="active" title="Dark">☾</button>
+            <button data-mode="light" title="Light">☀</button>
           </div>
 
           <h4>Colors</h4>
           <div class="sv" id="tpSv"><div class="sv-white"></div><div class="sv-black"></div><div class="sv-knob" id="tpSvKnob"></div></div>
           <div class="hue" id="tpHue"><div class="hue-knob" id="tpHueKnob"></div></div>
           <div class="stops" id="tpStops"></div>
-          <button class="tp-wide" id="tpAddColor">ï¼‹ Add Color</button>
+          <button class="tp-wide" id="tpAddColor">＋ Add Color</button>
 
           <h4>Controls</h4>
           <div class="tp-row"><span>Color Intensity</span><b id="tpIntensityLabel">0%</b></div>
           <input type="range" id="tpIntensity" min="0" max="100" value="0" />
-          <div class="tp-row"><span>Gradient Angle</span><b id="tpAngleLabel">135Â°</b></div>
+          <div class="tp-row"><span>Gradient Angle</span><b id="tpAngleLabel">135°</b></div>
           <input type="range" id="tpAngle" min="0" max="360" value="135" />
 
           <h4>Font</h4>
@@ -214,12 +215,12 @@
 
           <h4>Icons</h4>
           <div class="seg icons" id="tpIcons">
-            <button data-icons="classic" class="active">â–¶ â–¦ â—­</button>
-            <button data-icons="emoji">ðŸŽ® ðŸ§© ðŸŽ¨</button>
+            <button data-icons="classic" class="active">▶ ▦ ◭</button>
+            <button data-icons="emoji">🎮 🧩 🎨</button>
             <button data-icons="none">Text only</button>
           </div>
 
-          <button class="tp-wide" id="tpSurprise">ðŸŽ² Surprise Me!</button>
+          <button class="tp-wide" id="tpSurprise">🎲 Surprise Me!</button>
           <button class="tp-wide muted-btn" id="tpReset">Reset</button>
         </div>
         <div class="tp-foot">
@@ -228,7 +229,7 @@
         </div>
       </div>
       <div class="switcher" id="switcher">
-        <div class="sw-head"><h2>ACCOUNT SWITCHER</h2><button class="icon-btn close" id="swClose">âœ•</button></div>
+        <div class="sw-head"><h2>ACCOUNT SWITCHER</h2><button class="icon-btn close" id="swClose">✕</button></div>
         <div class="sw-body">
           <div id="swList" class="sw-list"></div>
           <button class="ms-btn" id="swAdd"><span class="ms-logo"><i></i><i></i><i></i><i></i></span>+ Microsoft Account</button>
@@ -238,18 +239,18 @@
       <div class="side-pane web-side" id="side-spotify"></div>
       <div class="side-pane web-side" id="side-instagram"></div>
       <div class="side-pane" id="side-tiktok">
-        <div class="tt-hint">â†‘ â†“ scroll Â· Space pause</div>
+        <div class="tt-hint">↑ ↓ scroll · Space pause</div>
       </div>
     </aside>
   </div>
 
   <!-- Modals -->
   <div class="link-overlay hidden" id="linkOverlay">
-    <button class="icon-btn close link-close" id="linkClose">âœ•</button>
+    <button class="icon-btn close link-close" id="linkClose">✕</button>
     <h2>ADD MICROSOFT ACCOUNT VIA LINK</h2>
     <div class="link-row">
       <div class="link-qr"><img id="linkQr" alt="" /></div>
-      <button class="link-code" id="linkCode" title="Copy code"><span id="linkCodeText">Â·Â·Â·Â·Â·Â·Â·Â·</span><span class="copy-ico">â§‰</span></button>
+      <button class="link-code" id="linkCode" title="Copy code"><span id="linkCodeText">········</span><span class="copy-ico">⧉</span></button>
     </div>
     <p class="link-text" id="linkText">Getting a code...</p>
     <button class="link-open" id="linkOpen">Open Link and Copy</button>
@@ -257,7 +258,7 @@
 
   <div class="modal hidden" id="settingsModal">
     <div class="modal-box">
-      <div class="card-head"><h3>SETTINGS</h3><button class="icon-btn" data-close>âœ•</button></div>
+      <div class="card-head"><h3>SETTINGS</h3><button class="icon-btn" data-close>✕</button></div>
       <label>Memory: <b id="ramLabel"></b><input type="range" id="ramMax" min="2" max="16" step="1" /></label>
       <div class="grid">
         <label>Width <input type="number" id="width" /></label>
@@ -274,7 +275,7 @@
 
   <div class="modal hidden" id="versionModal">
     <div class="modal-box">
-      <div class="card-head"><h3>PROFILES</h3><button class="icon-btn" data-close>âœ•</button></div>
+      <div class="card-head"><h3>PROFILES</h3><button class="icon-btn" data-close>✕</button></div>
       <p class="muted" style="margin:-6px 0 12px">Each profile has its own version, mods, resource packs and settings. Click one to use it.</p>
       <div id="profileList" class="profile-list"></div>
       <div id="profileEditor" class="profile-editor hidden">
@@ -296,7 +297,7 @@
 
   <div class="modal hidden" id="serverModal">
     <form class="modal-box small" id="addServer">
-      <div class="card-head"><h3>ADD SERVER</h3><button type="button" class="icon-btn" data-close>âœ•</button></div>
+      <div class="card-head"><h3>ADD SERVER</h3><button type="button" class="icon-btn" data-close>✕</button></div>
       <label>Name <input id="srvName" required /></label>
       <label>Address <input id="srvIp" placeholder="play.example.net" required /></label>
       <button class="play">ADD</button>
@@ -305,7 +306,7 @@
 
   <div class="modal hidden" id="consoleModal">
     <div class="modal-box wide">
-      <div class="card-head"><h3>CONSOLE</h3><button class="icon-btn" data-close>âœ•</button></div>
+      <div class="card-head"><h3>CONSOLE</h3><button class="icon-btn" data-close>✕</button></div>
       <pre id="log"></pre>
     </div>
   </div>
