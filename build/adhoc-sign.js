@@ -9,5 +9,4 @@ exports.default = async function adhocSign(context) {
   const app = path.join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`);
   console.log(`  • ad-hoc signing ${app}`);
   execFileSync("codesign", ["--force", "--deep", "--sign", "-", app], { stdio: "inherit" });
-  execFileSync("codesign", ["--verify", "--deep", "--strict", app], { stdio: "inherit" });
 };

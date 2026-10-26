@@ -37,7 +37,14 @@ jobs:
       - run: npm ci
 
       - name: Build
-        run: npx electron-builder ${{ matrix.args }} --publish never
+        shell: bash
+        # On failure, repeat the last log lines as annotations so they show without signing in
+        run: |
+          set -o pipefail
+          npx electron-builder ${{ matrix.args }} --publish never 2>&1 | tee build.log || {
+            tail -n 25 build.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          }
         env:
           # No Apple signing certificate: build an unsigned app
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
