@@ -33,6 +33,8 @@ jobs:
             args: --win nsis
             files: dist/*.exe
     runs-on: ${{ matrix.os }}
+    # GitHub sometimes has no Mac runners free; give a queued job longer before failing
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
