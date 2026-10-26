@@ -573,3 +573,54 @@ body.light .ghost { color: #c9c9d3; }
 .dlg-ok.danger { background: #d92b3a; }
 .dlg-ok:hover { filter: brightness(1.1); }
 .dlg-row button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+/* ===== Motion (inspired by the website): lift, glow, press, slide ===== */
+button { transition: transform .18s cubic-bezier(.2,.8,.2,1), filter .18s, box-shadow .18s, background .18s, color .18s; }
+.play, .pf-play, .mb-install, .dlg-ok, .tp-apply, .update-btn, .ghost, .pill, .icon-btn, .account-chip, .lib-btn, .pf-btn, .mb-type, .acc-tab, .mod-tab, .side-tab, .tp-wide, .tp-back, .dlg-cancel, #importSkinBtn, #importCapeBtn {
+  will-change: transform;
+}
+.play:not(:disabled):hover, .pf-play:hover, .mb-install:not(:disabled):hover, .dlg-ok:hover, .tp-apply:hover, .update-btn:not(:disabled):hover, #importSkinBtn:hover, #importCapeBtn:hover {
+  transform: translateY(-2px); box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.ghost:hover, .pill:hover, .icon-btn:hover, .account-chip:hover, .lib-btn:hover, .pf-btn:hover, .tp-wide:hover, .tp-back:hover, .dlg-cancel:hover { transform: translateY(-2px); }
+button:not(:disabled):active { transform: translateY(0) scale(.96) !important; transition-duration: .06s; }
+
+/* Tabs: underline grows in, peeks on hover */
+.tab::after {
+  content: ""; position: absolute; left: 12px; right: 12px; bottom: 2px; height: 3px; border-radius: 3px; background: var(--accent);
+  transform: scaleX(0); opacity: 0; transition: transform .25s cubic-bezier(.2,.8,.2,1), opacity .25s;
+}
+.tab:hover::after { transform: scaleX(.35); opacity: .6; }
+.tab.active::after { transform: scaleX(1); opacity: 1; }
+.tab .ti { display: inline-block; transition: transform .25s cubic-bezier(.2,.8,.2,1); }
+.tab:hover .ti { transform: translateY(-2px) rotate(-8deg) scale(1.15); }
+
+/* Play: a light sweep runs across every few seconds */
+.play { position: relative; overflow: hidden; }
+.play::after {
+  content: ""; position: absolute; top: 0; bottom: 0; left: -60%; width: 40%; pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.35), transparent); transform: skewX(-20deg);
+  animation: playShine 3.2s ease-in-out infinite;
+}
+.play:disabled::after { animation: none; }
+@keyframes playShine { 0%, 55% { left: -60%; } 85%, 100% { left: 130%; } }
+
+/* Cards lift on hover */
+.news-item, .srv, .mb-row, .mb-tcard, .lib-card, .mod, .cape, .mr, .card .profile, .sw-acc {
+  transition: transform .2s cubic-bezier(.2,.8,.2,1), box-shadow .2s, border-color .2s, background .2s;
+}
+.news-item:hover, .mb-row:hover, .mb-tcard:hover, .lib-card:hover, .cape:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(0,0,0,.35); }
+.srv:hover, .mod:hover, .mr:hover, .sw-acc:hover, .card .profile:hover { transform: translateX(3px); }
+.pf-card:hover { box-shadow: 0 16px 34px rgba(0,0,0,.4), 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent); }
+
+/* Pages fade up when you switch tabs */
+.page.active { animation: pageIn .28s cubic-bezier(.2,.8,.2,1); }
+@keyframes pageIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* Mouse tilt targets (driven from renderer.js) */
+.skin { transition: transform .5s cubic-bezier(.2,.8,.2,1); transform: perspective(1000px) rotateY(var(--ry, 0deg)) rotateX(var(--rx, 0deg)); }
+.skin.tilting { transition: transform .08s linear; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

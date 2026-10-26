@@ -64,6 +64,24 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Enter") { e.preventDefault(); closeDialog(document.activeElement !== $("dlgCancel")); }
 }, true);
 
+/* Mouse tilt, like the website: the element leans toward the cursor */
+function tiltOnHover(target, area = target, strength = 6) {
+  area.addEventListener("mousemove", (e) => {
+    const r = area.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width - 0.5;
+    const y = (e.clientY - r.top) / r.height - 0.5;
+    target.classList.add("tilting");
+    target.style.setProperty("--ry", `${(x * strength).toFixed(2)}deg`);
+    target.style.setProperty("--rx", `${(-y * strength * 0.7).toFixed(2)}deg`);
+  });
+  area.addEventListener("mouseleave", () => {
+    target.classList.remove("tilting");
+    target.style.removeProperty("--ry");
+    target.style.removeProperty("--rx");
+  });
+}
+tiltOnHover($("skin"), $("side-profile"), 18);
+
 /* Window + navigation */
 document.querySelectorAll("[data-win]").forEach((b) => b.addEventListener("click", () => api.window(b.dataset.win)));
 
