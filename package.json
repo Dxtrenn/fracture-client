@@ -8,7 +8,8 @@
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --win nsis"
+    "dist": "electron-builder --win nsis",
+    "dist:mac": "electron-builder --mac dmg --x64 --arm64"
   },
   "dependencies": {
     "extract-zip": "2.0.1",
@@ -30,7 +31,8 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "build/icon.png"
+      "icon": "build/icon.png",
+      "artifactName": "Fracture-Client-Setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -47,6 +49,24 @@
         "to": "fracture-mod.jar",
         "from": "resources/fracture-mod.jar"
       }
-    ]
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "public.app-category.games",
+      "identity": null,
+      "artifactName": "Fracture-Client-${version}-mac-${arch}.${ext}"
+    },
+    "dmg": {
+      "title": "Fracture Client"
+    }
   }
 }

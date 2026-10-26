@@ -1,5 +1,6 @@
 const $ = (id) => document.getElementById(id);
 const api = window.fractur;
+document.body.classList.add(`platform-${api.platform}`);
 
 const DEFAULT_SERVERS = [
   { name: "Hypixel", ip: "mc.hypixel.net" },

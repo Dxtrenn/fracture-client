@@ -159,12 +159,28 @@ function javaMajorFor(version) {
   return 21;
 }
 
+const IS_MAC = process.platform === "darwin";
+const IS_WIN = process.platform === "win32";
+
+// Where the java binary sits inside an extracted Temurin download on each OS
+function javaBinIn(home) {
+  if (IS_WIN) return path.join(home, "bin", "javaw.exe");
+  if (IS_MAC) return path.join(home, "Contents", "Home", "bin", "java");
+  return path.join(home, "bin", "java");
+}
+
+function untar(file, dir) {
+  return new Promise((resolve, reject) => {
+    require("child_process").execFile("tar", ["-xzf", file, "-C", dir], (err) => (err ? reject(err) : resolve()));
+  });
+}
+
 async function ensureJava(major) {
   const dir = path.join(ROOT, "runtime", `java${major}`);
   const findExe = (d) => {
     if (!fs.existsSync(d)) return null;
     for (const entry of fs.readdirSync(d)) {
-      const exe = path.join(d, entry, "bin", "javaw.exe");
+      const exe = javaBinIn(path.join(d, entry));
       if (fs.existsSync(exe)) return exe;
     }
     return null;
@@ -174,14 +190,24 @@ async function ensureJava(major) {
 
   status(`Downloading Java ${major}...`, 0);
   fs.mkdirSync(dir, { recursive: true });
-  const zip = path.join(dir, "jre.zip");
-  const url = `https://api.adoptium.net/v3/binary/latest/${major}/ga/windows/x64/jre/hotspot/normal/eclipse`;
-  await download(url, zip, (p) => status(`Downloading Java ${major}...`, p));
+  const os = IS_WIN ? "windows" : IS_MAC ? "mac" : "linux";
+  const archive = path.join(dir, IS_WIN ? "jre.zip" : "jre.tar.gz");
+  const urlFor = (arch) => `https://api.adoptium.net/v3/binary/latest/${major}/ga/${os}/${arch}/jre/hotspot/normal/eclipse`;
+  const arch = process.arch === "arm64" ? "aarch64" : "x64";
+  try {
+    await download(urlFor(arch), archive, (p) => status(`Downloading Java ${major}...`, p));
+  } catch (e) {
+    // Java 8 has no Apple Silicon build, so fall back to Intel Java (runs through Rosetta)
+    if (arch === "x64") throw e;
+    await download(urlFor("x64"), archive, (p) => status(`Downloading Java ${major}...`, p));
+  }
   status(`Extracting Java ${major}...`, null);
-  await extract(zip, { dir });
-  fs.unlinkSync(zip);
+  if (IS_WIN) await extract(archive, { dir });
+  else await untar(archive, dir);
+  fs.unlinkSync(archive);
   const exe = findExe(dir);
-  if (!exe) throw new Error("Java download did not contain javaw.exe");
+  if (!exe) throw new Error("The Java download didn't contain a Java program");
+  if (!IS_WIN) fs.chmodSync(exe, 0o755);
   return exe;
 }
 
@@ -387,7 +413,8 @@ function createWindow() {
     height: 800,
     minWidth: 1080,
     minHeight: 700,
-    frame: false,
+    // Mac keeps its native traffic-light buttons; Windows draws its own
+    ...(process.platform === "darwin" ? { titleBarStyle: "hiddenInset", trafficLightPosition: { x: 16, y: 28 } } : { frame: false }),
     backgroundColor: "#0b0b10",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),

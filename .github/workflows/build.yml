@@ -1,0 +1,56 @@
+name: Build Fracture Client
+
+# Builds the Mac and Windows apps. On a published release the files are attached to it;
+# on pushes and manual runs they're kept as downloadable workflow artifacts.
+on:
+  release:
+    types: [published]
+  push:
+    branches: [main]
+    paths: ["src/**", "resources/**", "build/**", "package.json", "package-lock.json", ".github/workflows/build.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            args: --mac dmg --x64 --arm64
+            files: dist/*.dmg
+          - os: windows-latest
+            args: --win nsis
+            files: dist/*.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        run: npx electron-builder ${{ matrix.args }} --publish never
+        env:
+          # No Apple signing certificate: build an unsigned app
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fracture-client-${{ matrix.os }}
+          path: ${{ matrix.files }}
+          if-no-files-found: error
+
+      - name: Attach to release
+        if: github.event_name == 'release'
+        shell: bash
+        run: gh release upload "${{ github.event.release.tag_name }}" ${{ matrix.files }} --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
