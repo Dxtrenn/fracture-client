@@ -272,6 +272,7 @@ api.on("device-error", (msg) => {
 
 /* News */
 function renderNewsItems(items) {
+  lastNewsItems = items;
   const wrap = $("news");
   wrap.innerHTML = "";
   for (const n of items) {
@@ -1223,9 +1224,9 @@ document.addEventListener("keydown", (e) => {
 const DEFAULT_THEME = { mode: "dark", colors: ["#ff3b4e", "#ff7a3b"], intensity: 0, angle: 135, font: "Segoe UI", icons: "classic", buttonSize: 100 };
 const THEME_FONTS = ["Segoe UI", "Minecraft", "Bahnschrift", "Trebuchet MS", "Verdana", "Tahoma", "Georgia", "Consolas", "Lucida Console", "Franklin Gothic Medium", "Segoe Print", "Comic Sans MS", "Impact"];
 const ICON_SETS = {
-  classic: { play: "▶", profiles: "▤", mods: "▦", skins: "☻", capes: "◭" },
-  emoji: { play: "🎮", profiles: "🗂", mods: "🧩", skins: "👕", capes: "🧣" },
-  none: { play: "", profiles: "", mods: "", skins: "", capes: "" },
+  classic: { play: "▶", profiles: "▤", mods: "▦", skins: "☻", capes: "◭", events: "★" },
+  emoji: { play: "🎮", profiles: "🗂", mods: "🧩", skins: "👕", capes: "🧣", events: "🎁" },
+  none: { play: "", profiles: "", mods: "", skins: "", capes: "", events: "" },
 };
 const BASES = {
   dark: { bg: "#07070a", panel: "#111116", panel2: "#18181f", line: "#22222c", text: "#ececf1", muted: "#7d7d8c", card: "#0d0d12" },
@@ -1275,6 +1276,7 @@ function applyTheme(t) {
   root.setProperty("--btn-zoom", String((t.buttonSize || 100) / 100));
   root.setProperty("--font", `"${t.font}", "Segoe UI", system-ui, sans-serif`);
   document.body.classList.toggle("light", t.mode === "light");
+  if (window.layoutsReady) setLayout(t.layout || null);
 
   const icons = ICON_SETS[t.icons] || ICON_SETS.classic;
   document.querySelectorAll(".ti").forEach((el) => (el.textContent = icons[el.dataset.i] || ""));
@@ -1676,10 +1678,10 @@ setInterval(() => { if (fUser) renderFriends(); }, 60000);
 
 /* ---- Client style theme presets (dev accounts only) ---- */
 const CLIENT_STYLES = {
-  "Modrinth style": { colors: ["#1bd96a", "#00af5c"], base: { bg: "#16181c", panel: "#1e2026", panel2: "#27292f", card: "#1a1c20", line: "#33363d", text: "#e2e4e9", muted: "#9a9fa8" }, font: "Segoe UI" },
-  "Lunar style": { colors: ["#2f7bff", "#56c8ff"], base: { bg: "#080b12", panel: "#0f141e", panel2: "#161d2b", card: "#0c1018", line: "#1f2838", text: "#e6ecf7", muted: "#7c879c" }, font: "Bahnschrift" },
-  "Dawn style": { colors: ["#ff7a59", "#ffc163"], base: { bg: "#120c0d", panel: "#1a1214", panel2: "#24191b", card: "#160f11", line: "#33242a", text: "#f4e9e4", muted: "#a38f8a" }, font: "Segoe UI" },
-  "Prism style": { colors: ["#8b5cf6", "#e879f9"], base: { bg: "#17161c", panel: "#1f1e26", panel2: "#292833", card: "#1b1a21", line: "#353443", text: "#ebe9f2", muted: "#9592a6" }, font: "Segoe UI" },
+  "Modrinth style": { layout: "modrinth", colors: ["#1bd96a", "#00af5c"], base: { bg: "#16181c", panel: "#1e2026", panel2: "#27292f", card: "#1a1c20", line: "#33363d", text: "#e2e4e9", muted: "#9a9fa8" }, font: "Segoe UI" },
+  "Lunar style": { layout: "lunar", colors: ["#2f7bff", "#56c8ff"], base: { bg: "#080b12", panel: "#0f141e", panel2: "#161d2b", card: "#0c1018", line: "#1f2838", text: "#e6ecf7", muted: "#7c879c" }, font: "Bahnschrift" },
+  "Dawn style": { layout: "dawn", colors: ["#ff7a59", "#ffc163"], base: { bg: "#120c0d", panel: "#1a1214", panel2: "#24191b", card: "#160f11", line: "#33242a", text: "#f4e9e4", muted: "#a38f8a" }, font: "Segoe UI" },
+  "Prism style": { layout: "prism", colors: ["#8b5cf6", "#e879f9"], base: { bg: "#17161c", panel: "#1f1e26", panel2: "#292833", card: "#1b1a21", line: "#353443", text: "#ebe9f2", muted: "#9592a6" }, font: "Segoe UI" },
 };
 $("tpPresets").innerHTML = Object.entries(CLIENT_STYLES).map(([name, p]) =>
   `<button class="tp-preset" data-preset="${name}" style="background:${p.base.panel2};color:${p.base.text}">${name}<i style="background:linear-gradient(90deg, ${p.colors.join(", ")})"></i></button>`).join("");
@@ -1687,7 +1689,362 @@ $("tpPresets").addEventListener("click", (e) => {
   const name = e.target.closest("[data-preset]")?.dataset.preset;
   if (!name) return;
   const p = CLIENT_STYLES[name];
-  draft = { ...JSON.parse(JSON.stringify(DEFAULT_THEME)), mode: "dark", colors: [...p.colors], base: { ...p.base }, font: p.font, buttonSize: draft.buttonSize, icons: draft.icons };
+  draft = { ...JSON.parse(JSON.stringify(DEFAULT_THEME)), mode: "dark", colors: [...p.colors], base: { ...p.base }, font: p.font, layout: p.layout, buttonSize: draft.buttonSize, icons: draft.icons };
   activeStop = 0;
   syncThemeForm();
 });
+
+/* ---- Dawn-style layout (dev-only client style): icon sidebar, big skin card, last played, news, TikTok ---- */
+var lastNewsItems = [];
+const dawnOn = () => document.body.classList.contains("layout-dawn");
+
+// Original pixel sunset, drawn small and scaled up so it looks blocky
+function drawSunset() {
+  const c = $("dhSky"), g = c.getContext("2d");
+  const W = c.width, H = c.height;
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const sky = ["#f6c6d8", "#f8cfd2", "#fbd9c8", "#fde2b8", "#fdeaa8", "#fff1a0"];
+  const band = Math.ceil((H * 0.75) / sky.length);
+  sky.forEach((col, i) => { g.fillStyle = col; g.fillRect(0, i * band, W, band); });
+  // Sun
+  g.fillStyle = "#fff7c2"; g.fillRect(W * 0.5 - 7, H * 0.52, 14, 10);
+  g.fillStyle = "#fffbe0"; g.fillRect(W * 0.5 - 5, H * 0.54, 10, 6);
+  // Clouds
+  g.fillStyle = "#fdf2ee";
+  for (let i = 0; i < 6; i++) {
+    const x = rnd() * W, y = 4 + rnd() * H * 0.3, w = 10 + rnd() * 18;
+    g.fillRect(x, y, w, 3); g.fillRect(x + 3, y - 2, w - 6, 2);
+  }
+  // Distant hills
+  g.fillStyle = "#d9c98a";
+  for (let x = 0; x < W; x += 4) { const h = 6 + Math.round(Math.sin(x / 13) * 3 + rnd() * 3); g.fillRect(x, H * 0.66 - h, 4, h + 10); }
+  // Trees: trunk + blocky leaves, bigger ones at the edges
+  const tree = (x, base, s) => {
+    g.fillStyle = "#6b4a2b"; g.fillRect(x + s * 2, base - s * 4, s, s * 4);
+    g.fillStyle = "#5d8f2e"; g.fillRect(x, base - s * 7, s * 5, s * 3);
+    g.fillStyle = "#77ad3a"; g.fillRect(x + s, base - s * 8, s * 3, s * 2);
+    g.fillStyle = "#8cc444"; g.fillRect(x + s, base - s * 7, s, s);
+  };
+  for (let i = 0; i < 9; i++) tree(rnd() * W, H * 0.72, 2 + Math.round(rnd()));
+  tree(-4, H * 0.8, 6); tree(W - 26, H * 0.8, 6);
+  // Grass and dirt
+  for (let x = 0; x < W; x += 3) {
+    g.fillStyle = rnd() > 0.5 ? "#79b33c" : "#6aa233"; g.fillRect(x, H * 0.76, 3, 4);
+    for (let y = H * 0.76 + 4; y < H; y += 3) { g.fillStyle = rnd() > 0.6 ? "#7a5232" : rnd() > 0.5 ? "#8b603b" : "#6c4729"; g.fillRect(x, y, 3, 3); }
+  }
+  // A few flowers
+  for (let i = 0; i < 6; i++) { g.fillStyle = i % 2 ? "#e8323c" : "#f4d03f"; g.fillRect(rnd() * W, H * 0.76 - 2, 2, 2); }
+}
+
+function renderDawnNews() {
+  const items = (lastNewsItems.length ? lastNewsItems : NEWS).slice(0, 2);
+  $("dhNews").innerHTML = "";
+  for (const n of items) {
+    const el = document.createElement("div");
+    el.className = "dh-news-card";
+    if (/^https:\/\//.test(n.image || "")) el.style.backgroundImage = `linear-gradient(180deg, rgba(10,10,14,.15), rgba(10,10,14,.9)), url("${encodeURI(n.image)}")`;
+    if (n.tag) { const t = document.createElement("span"); t.className = "tag"; t.textContent = n.tag; el.appendChild(t); }
+    const b = document.createElement("b"); b.textContent = n.title || "";
+    const s = document.createElement("small"); s.textContent = n.date ? timeAgo(n.date) : (n.body || "").slice(0, 60);
+    el.append(b, s);
+    if (/^https:\/\//.test(n.link || "")) { el.classList.add("clickable"); el.onclick = () => api.openNewsLink(n.link); }
+    $("dhNews").appendChild(el);
+  }
+}
+
+async function renderDawnProfiles() {
+  let stats = {};
+  try { stats = await api.profileStats(); } catch {}
+  const when = (p) => p.lastPlayed || stats[p.id]?.lastPlayed || 0;
+  const list = [...profiles.list].sort((a, b) => when(b) - when(a)).slice(0, 3);
+  $("dhProfiles").innerHTML = "";
+  list.forEach((p, i) => {
+    const row = document.createElement("div");
+    row.className = `dh-prof${i === 0 ? " big" : ""}`;
+    row.innerHTML = `<div class="dh-ico"><img src="heart.png" alt="" /></div><div class="dh-pinfo"><b></b><small></small></div><button class="dh-play">▶ Play</button><button class="dh-gear" title="Edit profile">⚙</button>`;
+    row.querySelector("b").textContent = p.name;
+    row.querySelector("small").textContent = `${p.loader === "fabric" ? "Fabric" : "Vanilla"} ${p.version} · ${lastPlayedText(when(p))}`;
+    row.querySelector(".dh-play").onclick = async () => { await switchProfile(p.id); play(undefined, p.id); };
+    row.querySelector(".dh-gear").onclick = () => { editingProfile = p; fillProfileForm(p); renderProfiles(); openModal("versionModal"); };
+    $("dhProfiles").appendChild(row);
+  });
+}
+
+async function renderDawnEvent() {
+  const r = await api.fractureApi("GET", "/events");
+  const open = (r.data?.events || []).find((e) => !e.winner && toMs(e.ends_at) > Date.now());
+  $("dhEventTitle").textContent = open ? open.title : "No giveaway right now";
+  $("dhEventPrize").textContent = open ? `🎁 ${open.prize} · ends in ${timeLeft(toMs(open.ends_at))}` : "Check back soon for free Fracture cosmetics.";
+}
+
+function renderDawn() {
+  if (!dawnOn()) return;
+  if (account) {
+    $("dhSkin").src = `https://mc-heads.net/body/${account.uuid}/260`;
+    $("dhName").textContent = account.name;
+    $("dhAccHead").src = `https://mc-heads.net/avatar/${account.uuid}/24`;
+    $("dhAccName").textContent = account.name;
+  }
+  $("dhSkin").classList.toggle("hidden", !account);
+  renderDawnProfiles();
+  renderDawnNews();
+  renderDawnEvent();
+}
+
+// Turns the layout on or off (called from applyTheme)
+let dawnBuilt = false;
+function setDawnLayout(on) {
+  document.body.classList.toggle("layout-dawn", on);
+  // Move the shared status bar and crash screen into whichever home is showing
+  const home = on ? $("dhStatusSlot") : document.querySelector("#play .hero-content");
+  if (home && $("statusText")) home.appendChild($("statusText").closest(".status"));
+  (on ? $("dhHero") : document.querySelector("#play .hero")).appendChild($("crash"));
+  if (on) {
+    if (!dawnBuilt) { drawSunset(); dawnBuilt = true; }
+    showSide("tiktok");
+    renderDawn();
+  }
+}
+
+$("dhGoProfile").onclick = () => document.querySelector('[data-tab="profiles"]').click();
+$("dhAccBtn").onclick = () => toggleSwitcher(!$("switcher").classList.contains("open"));
+$("dhEdit").onclick = () => $("themeBtn").click();
+$("dhManage").onclick = () => document.querySelector('[data-tab="profiles"]').click();
+$("dhAddMods").onclick = () => document.querySelector('[data-tab="mods"]').click();
+$("dhViewNews").onclick = () => api.openNewsLink("https://fracture-client.github.io/");
+$("dhEventBtn").onclick = () => document.querySelector('[data-tab="events"]').click();
+$("dawnChat").onclick = () => {
+  const toFriends = !$("side-friends").classList.contains("active");
+  showSide(toFriends ? "friends" : "tiktok");
+  if (toFriends) renderFriends();
+  $("dawnChat").textContent = toFriends ? "♪ Back to TikTok" : "💬 Chat";
+};
+document.querySelector('[data-tab="play"]').addEventListener("click", renderDawn);
+
+/* ---- Lunar-style layout (dev-only client style): space banner, launch button, news grid, friends + TikTok ---- */
+const lunarOn = () => document.body.classList.contains("layout-lunar");
+
+// Original pixel space scene: stars, a blocky planet and a moon
+function drawSpace() {
+  const c = $("lhSky"), g = c.getContext("2d");
+  const W = c.width, H = c.height;
+  let seed = 11;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const grd = g.createLinearGradient(0, 0, 0, H);
+  grd.addColorStop(0, "#05060c"); grd.addColorStop(1, "#141a33");
+  g.fillStyle = grd; g.fillRect(0, 0, W, H);
+  for (let i = 0; i < 70; i++) { g.fillStyle = rnd() > 0.8 ? "#9fb4ff" : "#d8dcf0"; g.fillRect(Math.floor(rnd() * W), Math.floor(rnd() * H), 1, 1); }
+  // Planet: blue ball with green land, drawn pixel by pixel
+  const px = 34, py = 44, r = 22;
+  for (let y = -r; y <= r; y++) for (let x = -r; x <= r; x++) {
+    if (x * x + y * y > r * r) continue;
+    const land = Math.sin((x + 5) / 6) + Math.cos((y - 3) / 5) > 0.9;
+    const shade = x + y > r * 0.6;
+    g.fillStyle = land ? (shade ? "#3d7a2a" : "#5aa83a") : (shade ? "#1f5a9e" : "#2f7dd1");
+    g.fillRect(px + x, py + y, 1, 1);
+  }
+  g.fillStyle = "rgba(255,255,255,.85)"; g.fillRect(px - 10, py - 14, 8, 3); g.fillRect(px + 4, py + 6, 6, 2);
+  // Moon
+  const mx = W - 30, my = 20, mr = 11;
+  for (let y = -mr; y <= mr; y++) for (let x = -mr; x <= mr; x++) {
+    if (x * x + y * y > mr * mr) continue;
+    g.fillStyle = (x * 3 + y * 7) % 5 === 0 ? "#b8bcc8" : x + y > mr * 0.5 ? "#c9ccd6" : "#eceef4";
+    g.fillRect(mx + x, my + y, 1, 1);
+  }
+  // A small heart-shaped "ship" for Fracture
+  g.fillStyle = "#ff3b4e";
+  [[1,0],[2,0],[4,0],[5,0],[0,1],[1,1],[2,1],[3,1],[4,1],[5,1],[6,1],[1,2],[2,2],[3,2],[4,2],[5,2],[2,3],[3,3],[4,3],[3,4]].forEach(([x, y]) => g.fillRect(W - 70 + x, H - 34 + y, 1, 1));
+  g.fillStyle = "#ffb347"; g.fillRect(W - 68, H - 28, 1, 2); g.fillRect(W - 64, H - 28, 1, 2);
+}
+
+function renderLunarNews() {
+  const items = lastNewsItems.length ? lastNewsItems : NEWS;
+  $("lhNews").innerHTML = "";
+  for (const n of items.slice(0, 6)) {
+    const el = document.createElement("div");
+    el.className = "lh-news-card";
+    if (/^https:\/\//.test(n.image || "")) el.style.backgroundImage = `linear-gradient(180deg, rgba(10,10,14,0), rgba(10,10,14,.85)), url("${encodeURI(n.image)}")`;
+    const b = document.createElement("b"); b.textContent = n.title || "";
+    const s = document.createElement("small"); s.textContent = (n.body || "").slice(0, 70);
+    el.append(b, s);
+    if (/^https:\/\//.test(n.link || "")) { el.classList.add("clickable"); el.onclick = () => api.openNewsLink(n.link); }
+    $("lhNews").appendChild(el);
+  }
+  $("lhNewsCount").textContent = `(${items.length})`;
+}
+
+function renderLunar(light) {
+  if (!lunarOn()) return;
+  $("lhName").textContent = account ? account.name : "Guest";
+  if (account) $("lhHead").src = `https://mc-heads.net/avatar/${account.uuid}/22`;
+  $("lhHead").classList.toggle("hidden", !account);
+  const p = prof();
+  $("lhSub").textContent = p ? `${p.name} · ${p.loader === "fabric" ? "Fabric" : "Vanilla"} ${p.version}` : "";
+  $("lhLaunch").disabled = launching;
+  $("lhLaunchText").textContent = launching ? "STARTING..." : gamesRunning ? `LAUNCH GAME (${gamesRunning} OPEN)` : "LAUNCH GAME";
+  if (light === true) return;
+  renderLunarNews();
+  renderFriends();
+}
+
+let lunarBuilt = false;
+function setLunarLayout(on) {
+  document.body.classList.toggle("layout-lunar", on);
+  const home = on ? $("lhStatusSlot") : (dawnOn() ? $("dhStatusSlot") : document.querySelector("#play .hero-content"));
+  if (home && $("statusText")) home.appendChild($("statusText").closest(".status"));
+  (on ? $("lhHero") : dawnOn() ? $("dhHero") : document.querySelector("#play .hero")).appendChild($("crash"));
+  if (on) {
+    if (!lunarBuilt) { drawSpace(); lunarBuilt = true; }
+    showSide("tiktok");
+    renderLunar();
+  }
+}
+$("lhLaunch").onclick = () => play();
+$("lhProfile").onclick = (e) => { e.stopPropagation(); $("profileBtn").click(); };
+$("lhAcc").onclick = () => toggleSwitcher(!$("switcher").classList.contains("open"));
+$("lhGear").onclick = () => { const p = prof(); if (!p) return; editingProfile = p; fillProfileForm(p); renderProfiles(); openModal("versionModal"); };
+$("lhExplore").onclick = () => api.openNewsLink("https://fracture-client.github.io/");
+document.querySelector('[data-tab="play"]').addEventListener("click", renderLunar);
+setInterval(() => { if (lunarOn() && $("play").classList.contains("active")) renderLunar(true); }, 1500);
+
+/* ---- Modrinth-style layout (dev-only client style): Jump in, Library grid, Playing as, news, TikTok ---- */
+const modrinthOn = () => document.body.classList.contains("layout-modrinth");
+
+async function renderModrinth() {
+  if (!modrinthOn()) return;
+  let stats = {};
+  try { stats = await api.profileStats(); } catch {}
+  const when = (p) => p.lastPlayed || stats[p.id]?.lastPlayed || 0;
+  const sorted = [...profiles.list].sort((a, b) => when(b) - when(a));
+  const desc = (p) => `${p.loader === "fabric" ? "Fabric" : "Vanilla"} ${p.version}`;
+  // Jump in: the three most recent
+  $("rhJump").innerHTML = "";
+  for (const p of sorted.slice(0, 3)) {
+    const row = document.createElement("div");
+    row.className = "rh-jump";
+    row.innerHTML = `<div class="rh-ico"><img src="heart.png" alt="" /></div><div class="rh-info"><b></b><small></small></div><button class="rh-play">▶ Play</button><button class="rh-more" title="Edit profile">⋮</button>`;
+    row.querySelector("b").textContent = p.name;
+    row.querySelector("small").textContent = `${desc(p)} · ${when(p) ? lastPlayedText(when(p)) : "Never played"}`;
+    row.querySelector(".rh-play").onclick = async () => { await switchProfile(p.id); play(undefined, p.id); };
+    row.querySelector(".rh-more").onclick = () => { editingProfile = p; fillProfileForm(p); renderProfiles(); openModal("versionModal"); };
+    $("rhJump").appendChild(row);
+  }
+  renderModrinthLibrary(sorted);
+  // Right column
+  $("rhAccName").textContent = account ? account.name : "Not signed in";
+  if (account) $("rhAccHead").src = `https://mc-heads.net/avatar/${account.uuid}/36`;
+  const n = (lastNewsItems.length ? lastNewsItems : NEWS)[0];
+  $("rhNewsTitle").textContent = n?.title || "";
+  $("rhNewsBody").textContent = n?.body || "";
+  $("rhNewsImg").style.backgroundImage = /^https:\/\//.test(n?.image || "") ? `url("${encodeURI(n.image)}")` : "";
+  $("rhNewsImg").classList.toggle("hidden", !/^https:\/\//.test(n?.image || ""));
+  const f = await api.fractureApi("GET", "/friends");
+  const online = (f.data?.friends || []).filter((x) => x.online);
+  $("rhFriends").textContent = !fUser ? "Sign in to see what your friends are playing." : online.length ? online.map((x) => `${x.name}: ${x.status || "Online"}`).join(" · ") : `${(f.data?.friends || []).length} friends, none online right now.`;
+}
+
+let rhSorted = [];
+function renderModrinthLibrary(sorted) {
+  if (sorted) rhSorted = sorted;
+  const q = $("rhSearch").value.trim().toLowerCase();
+  $("rhLib").innerHTML = "";
+  for (const p of rhSorted.filter((p) => !q || p.name.toLowerCase().includes(q))) {
+    const t = document.createElement("button");
+    t.className = "rh-tile";
+    t.innerHTML = `<div class="rh-tile-img"><img src="heart.png" alt="" /></div><b></b><small></small>`;
+    t.querySelector("b").textContent = p.name;
+    t.querySelector("small").textContent = `${p.loader === "fabric" ? "Fabric" : "Vanilla"} ${p.version}`;
+    t.onclick = async () => { await switchProfile(p.id); play(undefined, p.id); };
+    t.title = `Play ${p.name}`;
+    $("rhLib").appendChild(t);
+  }
+}
+
+function setModrinthLayout(on) {
+  document.body.classList.toggle("layout-modrinth", on);
+  if (on) {
+    $("rhStatusSlot").appendChild($("statusText").closest(".status"));
+    $("rhMain").prepend($("crash"));
+    showSide("tiktok");
+    renderModrinth();
+  }
+}
+$("rhSearch").addEventListener("input", () => renderModrinthLibrary());
+$("rhNew").onclick = () => $("profilesNewBtn").click();
+$("rhAcc").onclick = () => toggleSwitcher(!$("switcher").classList.contains("open"));
+$("rhFriendsBtn").onclick = () => {
+  const toFriends = !$("side-friends").classList.contains("active");
+  showSide(toFriends ? "friends" : "tiktok");
+  if (toFriends) renderFriends();
+  $("rhFriendsBtn").textContent = toFriends ? "Back to TikTok" : "Open friends";
+};
+document.querySelector('[data-tab="play"]').addEventListener("click", renderModrinth);
+
+// One place that picks the layout; the plain layout puts the status bar and crash screen back
+function setLayout(name) {
+  setDawnLayout(false); setLunarLayout(false); setModrinthLayout(false); setPrismLayout(false);
+  document.querySelector("#play .hero-content").appendChild($("statusText").closest(".status"));
+  document.querySelector("#play .hero").appendChild($("crash"));
+  if (name === "dawn") setDawnLayout(true);
+  else if (name === "lunar") setLunarLayout(true);
+  else if (name === "modrinth") setModrinthLayout(true);
+  else if (name === "prism") setPrismLayout(true);
+  document.body.classList.toggle("layout-alt", !!name);
+}
+
+/* ---- Prism-style layout (dev-only client style): toolbar, profile grid, actions column, news bar ---- */
+const prismOn = () => document.body.classList.contains("layout-prism");
+let pmSelected = null;
+
+async function renderPrism() {
+  if (!prismOn()) return;
+  let stats = {};
+  try { stats = await api.profileStats(); } catch {}
+  if (!profiles.list.some((p) => p.id === pmSelected)) pmSelected = profiles.active;
+  $("pmGrid").innerHTML = "";
+  for (const p of profiles.list) {
+    const t = document.createElement("button");
+    t.className = `pm-tile${p.id === pmSelected ? " sel" : ""}`;
+    t.innerHTML = `<img src="heart.png" alt="" /><span></span>`;
+    t.querySelector("span").textContent = p.name;
+    t.onclick = () => { pmSelected = p.id; renderPrism(); };
+    t.ondblclick = async () => { await switchProfile(p.id); play(undefined, p.id); };
+    $("pmGrid").appendChild(t);
+  }
+  const p = profiles.list.find((x) => x.id === pmSelected);
+  $("pmName").textContent = p ? p.name : "";
+  const st = (p && stats[p.id]) || {};
+  const last = p?.lastPlayed || st.lastPlayed;
+  $("pmInfo").textContent = p ? `Minecraft ${p.version}${p.loader === "fabric" ? " (Fabric)" : ""}, ${last ? "last played " + new Date(last).toLocaleString() : "never played"} · ${st.mods ?? 0} mods` : "";
+  const n = (lastNewsItems.length ? lastNewsItems : NEWS)[0];
+  $("pmNews").textContent = n ? n.title : "";
+}
+
+function setPrismLayout(on) {
+  document.body.classList.toggle("layout-prism", on);
+  if (on) {
+    $("pmStatusSlot").appendChild($("statusText").closest(".status"));
+    $("pmMain").prepend($("crash"));
+    showSide("tiktok");
+    renderPrism();
+  }
+}
+const pmProfile = () => profiles.list.find((x) => x.id === pmSelected);
+$("pmLaunch").onclick = async () => { const p = pmProfile(); if (!p) return; await switchProfile(p.id); play(undefined, p.id); };
+$("pmEdit").onclick = () => { const p = pmProfile(); if (!p) return; editingProfile = p; fillProfileForm(p); renderProfiles(); openModal("versionModal"); };
+$("pmFolder").onclick = () => { const p = pmProfile(); if (p) api.openProfile(p.id); };
+$("pmCopy").onclick = async () => { const p = pmProfile(); if (!p) return; await api.duplicateProfile(p.id); await loadProfiles(); renderPrism(); };
+$("pmDelete").onclick = async () => {
+  const p = pmProfile(); if (!p) return;
+  if (!(await ask({ title: `Delete "${p.name}"?`, message: "Its mods, worlds and screenshots go to the Recycle Bin, so you can still get them back.", ok: "Delete profile", danger: true }))) return;
+  try { await api.deleteProfile(p.id); } catch (err) { return setStatus(`Error: ${cleanError(err)}`); }
+  await loadProfiles(); renderPrism();
+};
+$("pmAdd").onclick = () => $("profilesNewBtn").click();
+$("pmMods").onclick = () => document.querySelector('[data-tab="mods"]').click();
+$("pmNewsBtn").onclick = () => api.openNewsLink("https://fracture-client.github.io/");
+document.querySelector('[data-tab="play"]').addEventListener("click", renderPrism);
+
+window.layoutsReady = true;
+setLayout(theme.layout || null);

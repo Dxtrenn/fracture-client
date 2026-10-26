@@ -35,12 +35,12 @@
     </div>
     <div class="top-right">
       <nav class="tabs">
-        <button class="tab active" data-tab="play"><span class="ti" data-i="play">▶</span> Play</button>
-        <button class="tab" data-tab="profiles"><span class="ti" data-i="profiles">▤</span> Profiles</button>
-        <button class="tab" data-tab="mods"><span class="ti" data-i="mods">▦</span> Mods</button>
-        <button class="tab" data-tab="capes" data-group="skins"><span class="ti" data-i="skins">☻</span> Skins</button>
-        <button class="tab" data-tab="capes" data-group="capes"><span class="ti" data-i="capes">◭</span> Capes</button>
-        <button class="tab" data-tab="events"><span class="ti" data-i="events">★</span> Events</button>
+        <button class="tab active" data-tab="play" title="Play"><span class="ti" data-i="play">▶</span> Play</button>
+        <button class="tab" data-tab="profiles" title="Profiles"><span class="ti" data-i="profiles">▤</span> Profiles</button>
+        <button class="tab" data-tab="mods" title="Mods"><span class="ti" data-i="mods">▦</span> Mods</button>
+        <button class="tab" data-tab="capes" data-group="skins" title="Skins"><span class="ti" data-i="skins">☻</span> Skins</button>
+        <button class="tab" data-tab="capes" data-group="capes" title="Capes"><span class="ti" data-i="capes">◭</span> Capes</button>
+        <button class="tab" data-tab="events" title="Events"><span class="ti" data-i="events">★</span> Events</button>
       </nav>
       <button class="update-btn hidden" id="updateBtn" title="A new version is available">⬇ UPDATE FRACTURE</button>
       <button class="account-chip" id="accountChip">
@@ -62,6 +62,77 @@
       <!-- PLAY -->
       <section id="play" class="page active">
         <div id="bcastBar" class="bcast hidden"></div>
+        <!-- Dawn-style home (dev client style) -->
+        <div class="alt-home" id="dawnHome">
+          <div class="dh-main">
+            <div class="dh-hero" id="dhHero">
+              <canvas id="dhSky" width="240" height="110"></canvas>
+              <button class="dh-plate" id="dhGoProfile"><b id="dhName">Guest</b><small>→ Go to Profiles</small></button>
+              <img id="dhSkin" class="dh-skin hidden" alt="" />
+              <button class="dh-edit" id="dhEdit" title="Customize your theme">✎</button>
+              <button class="dh-acc" id="dhAccBtn"><img id="dhAccHead" alt="" /><span id="dhAccName">Sign in</span><i>▾</i></button>
+            </div>
+            <div class="dh-status" id="dhStatusSlot"></div>
+            <div class="dh-head"><span>🕘</span><b>Last Played Profiles</b></div>
+            <div class="dh-profiles" id="dhProfiles"></div>
+            <div class="dh-bottom">
+              <button class="dh-manage" id="dhManage">▦ Manage All Profiles</button>
+              <button class="dh-addmods" id="dhAddMods">＋ Add Mods</button>
+            </div>
+          </div>
+          <div class="dh-right">
+            <div class="dh-newshead"><b><i></i>Latest News</b><button id="dhViewNews">View all →</button></div>
+            <div id="dhNews" class="dh-news"></div>
+            <div class="dh-event">
+              <div class="dh-event-top">★ FRACTURE EVENTS</div>
+              <b id="dhEventTitle">No giveaway right now</b>
+              <small id="dhEventPrize"></small>
+              <button id="dhEventBtn">Open Events</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lunar-style home (dev client style) -->
+        <div class="alt-home" id="lunarHome">
+          <div class="lh-top">
+            <button class="lh-acc" id="lhAcc">Welcome back, <img id="lhHead" alt="" /> <b id="lhName">Guest</b> ▾</button>
+          </div>
+          <div class="lh-hero" id="lhHero">
+            <canvas id="lhSky" width="300" height="100"></canvas>
+            <button class="lh-launch" id="lhLaunch"><b id="lhLaunchText">LAUNCH GAME</b><small id="lhSub"></small><span class="lh-caret" id="lhProfile" title="Pick a profile">▾</span></button>
+            <button class="lh-gear" id="lhGear" title="Edit profile">⚙</button>
+            <div class="lh-status" id="lhStatusSlot"></div>
+          </div>
+          <div class="lh-newshead"><b>Latest News <span id="lhNewsCount"></span></b><button id="lhExplore">Explore Fracture ▸</button></div>
+          <div class="lh-news" id="lhNews"></div>
+        </div>
+
+        <!-- Modrinth-style home (dev client style) -->
+        <div class="alt-home" id="modrinthHome">
+          <div class="rh-main" id="rhMain">
+            <h2>Jump in ⌃</h2>
+            <div id="rhJump" class="rh-jumps"></div>
+            <div class="rh-status" id="rhStatusSlot"></div>
+            <h2>Library</h2>
+            <div class="rh-tools"><input id="rhSearch" placeholder="🔍 Search" /><button class="rh-new" id="rhNew">＋ New profile</button></div>
+            <div id="rhLib" class="rh-lib"></div>
+          </div>
+        </div>
+
+        <!-- Prism-style home (dev client style) -->
+        <div class="alt-home" id="prismHome">
+          <div class="pm-toolbar">
+            <button id="pmAdd"><i>＋</i> Add Profile</button>
+            <button id="pmMods"><i>▦</i> Mods</button>
+          </div>
+          <div class="pm-main" id="pmMain">
+            <div class="pm-group">⌄ Profiles</div>
+            <div class="pm-grid" id="pmGrid"></div>
+          </div>
+          <div class="pm-status" id="pmStatusSlot"></div>
+          <div class="pm-newsbar"><span>💬 <span id="pmNews"></span></span><button id="pmNewsBtn">💬 More News</button></div>
+          <div class="pm-info" id="pmInfo"></div>
+        </div>
         <div class="hero">
           <div class="hero-art"></div>
           <div class="crash hidden" id="crash">
@@ -271,6 +342,26 @@
         <button class="side-tab" data-side="spotify">Spotify</button>
         <button class="side-tab" data-side="instagram">Instagram</button>
         <button class="side-tab" data-side="friends">Friends</button>
+      </div>
+      <button class="alt-chat" id="dawnChat">💬 Chat</button>
+      <div class="alt-side" id="rhSide">
+        <h4>Playing as</h4>
+        <button class="rh-acc" id="rhAcc"><img id="rhAccHead" alt="" /><span><b id="rhAccName">Not signed in</b><small>Minecraft account</small></span>▾</button>
+        <div id="rhFriends"></div>
+        <button id="rhFriendsBtn">Open friends</button>
+        <h4>News</h4>
+        <div class="rh-news-img hidden" id="rhNewsImg"></div>
+        <b id="rhNewsTitle"></b>
+        <p id="rhNewsBody"></p>
+      </div>
+      <div class="alt-side" id="pmSide">
+        <img src="heart.png" alt="" />
+        <b id="pmName"></b>
+        <button id="pmLaunch"><i style="color:#5be07a">▶</i> Launch</button>
+        <button id="pmEdit"><i>✎</i> Edit</button>
+        <button id="pmFolder"><i>📁</i> Folder</button>
+        <button id="pmCopy"><i>⧉</i> Copy</button>
+        <button id="pmDelete"><i>🗑</i> Delete</button>
       </div>
       <div class="side-pane active" id="side-profile">
         <div class="swoosh"></div>

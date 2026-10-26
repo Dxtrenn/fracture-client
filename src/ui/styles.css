@@ -696,3 +696,176 @@ button:not(:disabled):active { transform: translateY(0) scale(.96) !important; t
 .splash-status { font-size: 12px; color: var(--muted); }
 @keyframes splashBeat { 0%, 100% { transform: scale(1); } 15% { transform: scale(1.12); } 30% { transform: scale(1); } 45% { transform: scale(1.07); } }
 @keyframes splashSlide { from { transform: translateX(-110%); } to { transform: translateX(260%); } }
+
+/* ===== Alternative layouts (dev-only client styles): Dawn, Lunar, Modrinth ===== */
+.alt-home, .alt-side { display: none; }
+body.layout-dawn #dawnHome, body.layout-lunar #lunarHome, body.layout-modrinth #modrinthHome { display: flex; }
+body.layout-alt #play > .hero, body.layout-alt #play > .bottom { display: none; }
+
+/* Shared: tabs become an icon sidebar down the left */
+body.layout-alt .tabs { position: fixed; left: 0; top: 76px; bottom: 0; width: 76px; height: auto; flex-direction: column; justify-content: flex-start; gap: 6px; border-radius: 0; padding: 14px 10px; background: var(--card); z-index: 5; zoom: 1; }
+body.layout-alt .tab { font-size: 0; height: 54px; border-radius: 12px; display: grid; place-items: center; padding: 0; }
+body.layout-alt .tab .ti { font-size: 22px; }
+body.layout-alt .tab.active { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+body.layout-alt .tab::after, body.layout-alt .tab.active::after { display: none; }
+body.layout-alt .layout { padding-left: 96px; }
+body.layout-alt .side-tabs { display: none; }
+body.layout-alt #play { gap: 12px; }
+body.layout-alt #play .status { margin: 0; }
+
+/* ---- Dawn ---- */
+#dawnHome { flex: 1; gap: 18px; min-height: 0; }
+.dh-main { flex: 1.7; display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; overflow-y: auto; }
+.dh-hero { position: relative; border-radius: 14px; overflow: hidden; min-height: 300px; flex: none; border: 2px solid var(--line); }
+.dh-hero canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+.dh-skin { position: absolute; left: 50%; bottom: 34px; height: 230px; transform: translateX(-50%); filter: drop-shadow(0 8px 14px rgba(0,0,0,.45)); }
+.dh-plate { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); background: rgba(20,20,26,.75); border-radius: 8px; padding: 5px 12px; display: flex; flex-direction: column; align-items: center; z-index: 2; }
+.dh-plate b { font-size: 18px; } .dh-plate small { font-size: 11px; color: #ddd; }
+.dh-edit { position: absolute; right: 12px; bottom: 12px; width: 36px; height: 36px; border-radius: 8px; background: rgba(20,20,26,.8); font-size: 16px; z-index: 2; }
+.dh-acc { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 300px; padding: 10px 14px; border-radius: 12px 12px 0 0; background: var(--panel); display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 13px; z-index: 2; }
+.dh-acc img { width: 24px; height: 24px; border-radius: 4px; image-rendering: pixelated; } .dh-acc span { flex: 1; } .dh-acc i { font-style: normal; color: var(--muted); }
+.dh-hero .crash { z-index: 3; }
+.dh-head { display: flex; align-items: center; gap: 10px; font-size: 16px; margin-top: 4px; }
+.dh-head span { width: 28px; height: 28px; display: grid; place-items: center; background: var(--panel); border-radius: 50%; font-size: 13px; }
+.dh-profiles { display: flex; flex-direction: column; gap: 10px; }
+.dh-prof { display: flex; align-items: center; gap: 14px; padding: 10px 16px; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); }
+.dh-prof.big { padding: 18px 20px; background: linear-gradient(90deg, var(--panel2), var(--panel)); }
+.dh-ico { width: 44px; height: 44px; border-radius: 10px; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: grid; place-items: center; flex: none; }
+.dh-prof.big .dh-ico { width: 60px; height: 60px; }
+.dh-ico img { width: 70%; image-rendering: pixelated; }
+.dh-pinfo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.dh-pinfo b { font-size: 16px; } .dh-prof.big .dh-pinfo b { font-size: 22px; }
+.dh-pinfo small { color: var(--muted); font-size: 13px; }
+.dh-play { padding: 9px 22px; border-radius: 8px; background: #2fbf4f; color: #fff; font-weight: 800; font-size: 16px; border: 2px solid #5be07a; }
+.dh-prof.big .dh-play { padding: 12px 30px; font-size: 19px; }
+.dh-play:hover { filter: brightness(1.1); }
+.dh-gear { width: 42px; height: 42px; border-radius: 10px; background: var(--panel2); border: 1px solid var(--line); font-size: 18px; }
+.dh-bottom { display: flex; gap: 14px; margin-top: auto; }
+.dh-bottom button { flex: 1; padding: 12px; border-radius: 10px; font-weight: 800; font-size: 13px; }
+.dh-manage { background: linear-gradient(90deg, var(--accent), var(--accent2)); color: #fff; }
+.dh-addmods { background: var(--panel); border: 1px solid var(--line); }
+.dh-right { flex: 1; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.dh-newshead { display: flex; justify-content: space-between; align-items: center; }
+.dh-newshead b { font-size: 17px; display: flex; align-items: center; gap: 10px; }
+.dh-newshead i { width: 8px; height: 8px; border-radius: 50%; background: var(--accent2); }
+.dh-newshead button { color: var(--muted); font-size: 13px; }
+.dh-news { display: flex; flex-direction: column; gap: 14px; }
+.dh-news-card { min-height: 150px; border-radius: 12px; background: var(--panel) center/cover; border: 1px solid var(--line); padding: 16px 18px; display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; }
+.dh-news-card .tag { align-self: flex-start; background: var(--accent2); color: #fff; padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 800; margin-bottom: 4px; }
+.dh-news-card b { font-size: 19px; } .dh-news-card small { color: var(--muted); font-size: 13px; }
+.dh-news-card.clickable { cursor: pointer; } .dh-news-card.clickable:hover { filter: brightness(1.12); }
+.dh-event { border-radius: 12px; overflow: hidden; background: var(--panel); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; padding: 0 0 14px; }
+.dh-event-top { background: linear-gradient(90deg, var(--accent), var(--accent2)); color: #fff; font-weight: 900; letter-spacing: 1px; text-align: center; padding: 18px; font-size: 18px; }
+.dh-event b, .dh-event small { padding: 0 14px; } .dh-event small { color: var(--muted); font-size: 12px; }
+.dh-event button { margin: 4px 14px 0; padding: 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel2); font-weight: 800; }
+.dh-status:empty, .lh-status:empty, .rh-status:empty { display: none; }
+
+/* Dawn + Modrinth: Chat / Friends button pinned at the bottom of the TikTok column */
+.alt-chat { display: none; }
+body.layout-dawn #dawnChat { display: block; position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); z-index: 6; padding: 10px 40px; border-radius: 10px; background: var(--panel2); border: 1px solid var(--line); font-weight: 800; font-size: 14px; }
+body.layout-dawn #dawnChat:hover { background: var(--line); }
+
+/* ---- Lunar ---- */
+#lunarHome { flex: 1; flex-direction: column; gap: 14px; min-height: 0; overflow-y: auto; }
+.lh-top { display: flex; align-items: center; }
+.lh-acc { font-size: 17px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+.lh-acc b { color: var(--text); } .lh-acc img { width: 20px; height: 20px; border-radius: 3px; image-rendering: pixelated; }
+.lh-hero { position: relative; min-height: 300px; border-radius: 14px; overflow: hidden; border: 2px solid color-mix(in srgb, var(--accent) 25%, var(--line)); flex: none; display: grid; place-items: center; }
+.lh-hero canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+.lh-launch { position: relative; z-index: 2; min-width: 320px; padding: 16px 52px 12px; border-radius: 6px; background: linear-gradient(180deg, #2fd66a, #1fb455); color: #fff; display: flex; flex-direction: column; align-items: center; gap: 4px; box-shadow: 0 0 0 2px #5df08d inset, 0 10px 30px rgba(31,180,85,.35); }
+.lh-launch b { font-size: 26px; font-weight: 900; letter-spacing: .5px; } .lh-launch small { font-size: 12px; font-weight: 700; opacity: .9; }
+.lh-launch:hover { filter: brightness(1.08); } .lh-launch:disabled { filter: grayscale(.4); }
+.lh-caret { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); padding: 6px; font-size: 13px; }
+.lh-gear { position: absolute; right: 14px; bottom: 14px; z-index: 2; width: 30px; height: 30px; border-radius: 7px; background: rgba(255,255,255,.12); }
+.lh-status { position: absolute; left: 16px; right: 60px; bottom: 12px; z-index: 2; }
+.lh-hero .crash { z-index: 3; }
+.lh-newshead { display: flex; justify-content: space-between; align-items: center; padding: 0 4px; }
+.lh-newshead b { font-size: 16px; } .lh-newshead span { color: var(--muted); font-weight: 500; }
+.lh-newshead button { color: var(--muted); font-size: 13px; }
+.lh-news { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.lh-news-card { position: relative; aspect-ratio: 2 / 1; border-radius: 10px; background: linear-gradient(135deg, var(--panel2), var(--card)) center/cover; border: 1px solid var(--line); padding: 14px; display: flex; flex-direction: column; justify-content: flex-end; gap: 3px; }
+.lh-news-card::before { content: ""; position: absolute; left: -6px; top: -6px; width: 14px; height: 14px; border-radius: 50%; background: #2fd66a; }
+.lh-news-card b { font-size: 16px; } .lh-news-card small { font-size: 12px; color: var(--muted); }
+.lh-news-card.clickable { cursor: pointer; } .lh-news-card.clickable:hover { filter: brightness(1.12); }
+/* Lunar side: friends on top, TikTok below (where Lunar has its ad) */
+body.layout-lunar #side-friends { display: flex; flex: none; max-height: 42%; justify-content: flex-start; align-items: stretch; padding: 12px 14px; gap: 8px; overflow-y: auto; border-bottom: 1px solid var(--line); }
+body.layout-lunar #side-tiktok { display: flex; flex: 1; }
+body.layout-lunar #side-profile { display: none; }
+
+/* ---- Modrinth ---- */
+#modrinthHome { flex: 1; min-height: 0; }
+.rh-main { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; overflow-y: auto; padding-right: 6px; }
+.rh-main h2 { font-size: 24px; font-weight: 800; margin-top: 4px; }
+.rh-jumps { display: flex; flex-direction: column; gap: 10px; }
+.rh-jump { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); }
+.rh-ico { width: 48px; height: 48px; border-radius: 10px; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: grid; place-items: center; flex: none; }
+.rh-ico img { width: 66%; image-rendering: pixelated; }
+.rh-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.rh-info b { font-size: 16px; } .rh-info small { color: var(--muted); font-size: 13px; }
+.rh-play { padding: 9px 18px; border-radius: 10px; background: var(--accent); color: #0b1a10; font-weight: 800; font-size: 15px; }
+.rh-play:hover { filter: brightness(1.1); }
+.rh-more { width: 30px; height: 36px; font-size: 18px; color: var(--muted); }
+.rh-tools { display: flex; gap: 10px; }
+.rh-tools input { flex: 1; min-width: 0; }
+.rh-new { padding: 9px 16px; border-radius: 10px; background: var(--accent); color: #0b1a10; font-weight: 800; }
+.rh-lib { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.rh-tile { padding: 12px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; text-align: left; }
+.rh-tile:hover { border-color: var(--accent); }
+.rh-tile-img { aspect-ratio: 1; border-radius: 10px; background: linear-gradient(135deg, var(--accent), var(--accent2)); display: grid; place-items: center; margin-bottom: 6px; }
+.rh-tile-img img { width: 55%; image-rendering: pixelated; }
+.rh-tile b { font-size: 15px; } .rh-tile small { color: var(--muted); font-size: 12px; }
+/* Modrinth side: Playing as, friends, news on top; TikTok below where Modrinth has its ad */
+body.layout-modrinth #rhSide { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-bottom: 1px solid var(--line); flex: none; }
+#rhSide h4 { font-size: 15px; color: var(--muted); font-weight: 600; }
+.rh-acc { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 12px; background: var(--panel2); border: 1px solid var(--line); text-align: left; }
+.rh-acc img { width: 36px; height: 36px; border-radius: 6px; image-rendering: pixelated; }
+.rh-acc span { flex: 1; display: flex; flex-direction: column; } .rh-acc small { color: var(--muted); font-size: 12px; }
+#rhFriends { font-size: 13px; color: var(--muted); }
+#rhFriendsBtn { color: var(--accent); font-weight: 800; font-size: 13px; text-align: left; }
+.rh-news-img { height: 90px; border-radius: 10px; background: var(--panel2) center/cover; }
+#rhNewsTitle { font-size: 15px; } #rhNewsBody { font-size: 12px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+body.layout-modrinth #side-profile { display: none; }
+body.layout-modrinth .side-pane.active { flex: 1; }
+
+/* ---- Prism ---- */
+body.layout-prism .tabs { position: static; width: auto; height: 54px; flex-direction: row; padding: 4px 6px; border-radius: 4px; background: var(--panel); }
+body.layout-prism .tab { font-size: 13px; height: auto; display: flex; align-items: center; gap: 6px; padding: 0 14px; border-radius: 4px; }
+body.layout-prism .tab .ti { font-size: 15px; }
+body.layout-prism .layout { padding-left: 34px; }
+#prismHome { flex: 1; flex-direction: column; min-height: 0; background: var(--card); border: 1px solid var(--line); border-radius: 4px; }
+.pm-toolbar { display: flex; gap: 4px; padding: 6px 8px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.pm-toolbar button { padding: 6px 10px; border-radius: 3px; font-size: 13px; display: flex; gap: 6px; align-items: center; }
+.pm-toolbar button:hover { background: var(--panel2); }
+.pm-toolbar i { font-style: normal; width: 20px; height: 20px; display: grid; place-items: center; background: #3a8f3a; border-radius: 3px; color: #fff; }
+.pm-main { flex: 1; overflow-y: auto; padding: 10px 14px; position: relative; }
+.pm-group { color: var(--muted); font-weight: 700; font-size: 13px; padding-bottom: 8px; border-bottom: 1px solid var(--line); margin-bottom: 10px; }
+.pm-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.pm-tile { width: 104px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 8px 4px 0; }
+.pm-tile img { width: 44px; height: 44px; image-rendering: pixelated; }
+.pm-tile span { width: 100%; padding: 4px; font-size: 12px; text-align: center; background: var(--panel2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pm-tile.sel span { background: #8fd14f; color: #111; }
+.pm-status { padding: 0 14px 8px; } .pm-status:empty { display: none; }
+.pm-newsbar { display: flex; justify-content: space-between; padding: 7px 12px; border-top: 1px solid var(--line); font-size: 13px; background: var(--panel); }
+.pm-newsbar button { font-size: 13px; }
+.pm-info { padding: 6px 12px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); }
+/* Prism side: big icon + actions on top, TikTok underneath */
+body.layout-prism .side { width: 400px; border-radius: 4px; }
+body.layout-prism #pmSide { display: flex; flex-direction: column; align-items: stretch; padding: 12px 8px; border-bottom: 1px solid var(--line); flex: none; }
+#pmSide img { width: 80px; align-self: center; image-rendering: pixelated; }
+#pmName { align-self: center; margin: 8px 0 10px; font-size: 14px; }
+#pmSide button { text-align: left; padding: 5px 8px; font-size: 13px; border-radius: 3px; display: flex; gap: 8px; }
+#pmSide button:hover { background: var(--panel2); }
+#pmSide button i { font-style: normal; width: 16px; text-align: center; }
+body.layout-prism #side-profile { display: none; }
+body.layout-prism .side-pane.active { flex: 1; }
+/* Prism: the whole launcher pops out as a floating window over a blurred desktop */
+body.layout-prism { background: radial-gradient(circle at 20% 30%, #7a3b2a, transparent 45%), radial-gradient(circle at 80% 70%, #2a4a6a, transparent 50%), linear-gradient(135deg, #3a2a24, #1b2230); }
+body.layout-prism .layout { margin: 4px 40px 30px; padding: 0; gap: 0; background: #262626; border: 1px solid #3c3c3c; border-radius: 6px; box-shadow: 0 24px 70px rgba(0,0,0,.65), 0 0 0 1px rgba(255,255,255,.04); }
+body.layout-prism #prismHome { border: none; border-radius: 0; background: #262626; }
+body.layout-prism .side { border-left: 1px solid #3c3c3c; background: #2b2b2b; border-radius: 0; }
+body.layout-prism .pm-toolbar, body.layout-prism .pm-newsbar { background: #2f2f2f; }
+body.layout-lunar #side-friends { flex-direction: column; }
+body.layout-alt .tab { position: relative; }
+.dh-skin { bottom: 44px; height: 200px; }
+.dh-hero { min-height: 320px; }
+body.layout-prism #prismHome { display: flex; }
