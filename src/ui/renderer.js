@@ -2065,7 +2065,7 @@ async function renderShop() {
   if (!r.ok) { $("shopGrid").innerHTML = `<div class="empty-ev">Can't reach the Fracture server right now.</div>`; return; }
   const d = r.data;
   const owned = new Set(d.owned || []);
-  $("shopBalance").textContent = fUser ? (d.balance ?? 0).toLocaleString() : "–";
+  $("shopBalance").textContent = !fUser ? "–" : d.unlimited ? "∞" : (d.balance ?? 0).toLocaleString();
   $("shopToday").textContent = fUser ? `${d.today ?? 0} / ${d.dailyCap} earned today` : "Sign in to earn points";
   $("shopTodayBar").style.width = fUser ? Math.min(100, ((d.today || 0) / d.dailyCap) * 100) + "%" : "0";
   const devItems = d.items.filter((it) => it.dev);
@@ -2082,7 +2082,7 @@ async function renderShop() {
       : worn ? `<button class="pill" data-unequip="1">✓ WEARING</button>`
       : have ? `<button class="pill accent" data-equip="${it.id}">WEAR</button>`
       : it.price == null ? `<button class="pill" disabled>WIN A GIVEAWAY</button>`
-      : `<button class="pill accent" data-buy="${it.id}" ${(d.balance || 0) < it.price ? "disabled" : ""}>◆ ${it.price}</button>`;
+      : `<button class="pill accent" data-buy="${it.id}" ${!d.unlimited && (d.balance || 0) < it.price ? "disabled" : ""}>◆ ${it.price}</button>`;
     return `<div class="shop-item${worn ? " worn" : ""}"><div class="cape-svg">${CAPE_SVGS[it.name] || ""}</div><b>${escH(it.name)}</b>${it.season ? '<small class="season">Seasonal</small>' : ""}${btn}</div>`;
   }).join("");
 }
