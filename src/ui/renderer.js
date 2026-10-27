@@ -2068,7 +2068,15 @@ async function renderShop() {
   $("shopBalance").textContent = fUser ? (d.balance ?? 0).toLocaleString() : "–";
   $("shopToday").textContent = fUser ? `${d.today ?? 0} / ${d.dailyCap} earned today` : "Sign in to earn points";
   $("shopTodayBar").style.width = fUser ? Math.min(100, ((d.today || 0) / d.dailyCap) * 100) + "%" : "0";
-  $("shopGrid").innerHTML = d.items.map((it) => {
+  const devItems = d.items.filter((it) => it.dev);
+  $("shopDev").classList.toggle("hidden", !devItems.length);
+  if (devItems.length && !$("devCapesFrame").src) $("devCapesFrame").src = "dev-capes.html";
+  $("shopDevBtns").innerHTML = devItems.map((it) => {
+    const mine = owned.has(it.id), worn = d.equipped === it.id;
+    const btn = !mine ? `<button class="pill" disabled>NOT YOURS</button>` : worn ? `<button class="pill" data-unequip="1">✓ WEARING</button>` : `<button class="pill accent" data-equip="${it.id}">WEAR</button>`;
+    return `<div class="shop-dev-item${worn ? " worn" : ""}"><b>${escH(it.name)}</b>${btn}</div>`;
+  }).join("");
+  $("shopGrid").innerHTML = d.items.filter((it) => !it.dev).map((it) => {
     const have = owned.has(it.id), worn = d.equipped === it.id;
     const btn = !fUser ? `<button class="pill" disabled>SIGN IN</button>`
       : worn ? `<button class="pill" data-unequip="1">✓ WEARING</button>`
@@ -2078,7 +2086,7 @@ async function renderShop() {
     return `<div class="shop-item${worn ? " worn" : ""}"><div class="cape-svg">${CAPE_SVGS[it.name] || ""}</div><b>${escH(it.name)}</b>${it.season ? '<small class="season">Seasonal</small>' : ""}${btn}</div>`;
   }).join("");
 }
-$("shopGrid").addEventListener("click", async (e) => {
+const shopClick = async (e) => {
   const b = e.target.closest("button");
   if (!b) return;
   let r;
@@ -2091,7 +2099,9 @@ $("shopGrid").addEventListener("click", async (e) => {
   else return;
   if (!r.ok) ask({ title: "Couldn't do that", message: r.data?.error || "Error " + r.status, icon: "!" });
   renderShop();
-});
+};
+$("shopGrid").addEventListener("click", shopClick);
+$("shopDevBtns").addEventListener("click", shopClick);
 document.querySelector('[data-tab="shop"]').addEventListener("click", renderShop);
 
 /* ---- Dev chat (team only; the server checks) ---- */

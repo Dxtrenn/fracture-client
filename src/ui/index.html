@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https://raw.githubusercontent.com https://i.imgur.com https://mc-heads.net https://api.mcsrvstat.us https://cdn.modrinth.com http://textures.minecraft.net https://textures.minecraft.net; style-src 'self' 'unsafe-inline'; frame-src https://www.tiktok.com https://open.spotify.com https://accounts.spotify.com https://www.instagram.com https://mccapes.net https://skinmc.net https://namemc.com https://minecraftcapes.net" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: https://raw.githubusercontent.com https://i.imgur.com https://mc-heads.net https://api.mcsrvstat.us https://cdn.modrinth.com http://textures.minecraft.net https://textures.minecraft.net; style-src 'self' 'unsafe-inline'; frame-src 'self' https://www.tiktok.com https://open.spotify.com https://accounts.spotify.com https://www.instagram.com https://mccapes.net https://skinmc.net https://namemc.com https://minecraftcapes.net" />
   <title>Fracture Client</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -183,6 +183,11 @@
           </div>
           <p class="muted" style="margin:-4px 0 6px">Earn 1 point for every minute you play Minecraft through Fracture. Points can't be bought, and every cosmetic is visual only.</p>
           <div class="shop-today"><div class="shop-today-bar"><i id="shopTodayBar"></i></div><small id="shopToday"></small></div>
+          <div id="shopDev" class="shop-dev hidden">
+            <div class="dev-head">DEV CAPES <small>only the Fracture team sees these. Each dev wears their own.</small></div>
+            <iframe id="devCapesFrame" class="dev-capes-frame" title="Dev code capes"></iframe>
+            <div id="shopDevBtns" class="shop-dev-btns"></div>
+          </div>
           <div id="shopGrid" class="shop-grid"></div>
         </div>
       </section>
