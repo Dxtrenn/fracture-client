@@ -804,7 +804,7 @@ ipcMain.handle("open-external", (_e, url) => {
 ipcMain.handle("open-folder", () => shell.openPath(ROOT));
 
 // Multiplayer servers saved in every profile (ours first, then other launchers), deduped by address
-ipcMain.handle("servers:saved", () => {
+function allSavedServers() {
   const { readServersDat } = require("./nbt");
   const appData = app.getPath("appData");
   const files = [];
@@ -812,7 +812,11 @@ ipcMain.handle("servers:saved", () => {
   files.push(path.join(IS_MAC ? appData : appData, IS_MAC ? "minecraft" : ".minecraft", "servers.dat"));
   for (const d of subdirs(path.join(appData, "PrismLauncher", "instances"))) files.push(path.join(d, "minecraft", "servers.dat"), path.join(d, ".minecraft", "servers.dat"));
   for (const d of subdirs(path.join(appData, "ModrinthApp", "profiles"))) files.push(path.join(d, "servers.dat"));
+  // Dawn keeps the list it syncs between profiles here
+  files.push(path.join(appData, ".dawn", "auto-sync", "groups", "default", "servers.dat"));
+  for (const d of subdirs(path.join(appData, ".dawn", "auto-sync", "groups"))) files.push(path.join(d, "servers.dat"));
   for (const d of subdirs(path.join(appData, ".dawn", "profiles"))) files.push(path.join(d, ".minecraft", "servers.dat"), path.join(d, "private-game-content", "servers.dat"));
+  for (const d of subdirs(path.join(os.homedir(), "curseforge", "minecraft", "Instances"))) files.push(path.join(d, "servers.dat"));
   for (const d of subdirs(path.join(os.homedir(), ".lunarclient", "profiles"))) files.push(path.join(d, "servers.dat"));
 
   const seen = new Set();
@@ -828,7 +832,38 @@ ipcMain.handle("servers:saved", () => {
     }
   }
   return out;
-});
+}
+ipcMain.handle("servers:saved", () => allSavedServers());
+
+// Before a profile starts, add saved servers it doesn't have yet to its in-game Multiplayer list.
+// Each address is only added once per profile, so a server you delete in game stays deleted.
+function syncServersInto(instanceDir) {
+  const { readServersDat, writeServersDat } = require("./nbt");
+  const datFile = path.join(instanceDir, "servers.dat");
+  const recordFile = path.join(instanceDir, "fracture-servers.json");
+  let current = [];
+  try { current = readServersDat(fs.readFileSync(datFile)); } catch {}
+  let offered = [];
+  try { offered = JSON.parse(fs.readFileSync(recordFile, "utf8")); } catch {}
+  const have = new Set(current.map((s) => s.ip.toLowerCase()));
+  const done = new Set(offered);
+  let added = 0;
+  for (const s of allSavedServers()) {
+    const key = s.ip.toLowerCase();
+    if (done.has(key)) continue;
+    done.add(key);
+    if (have.has(key)) continue;
+    current.push(s);
+    have.add(key);
+    added++;
+  }
+  if (added) {
+    if (fs.existsSync(datFile)) fs.copyFileSync(datFile, datFile + "_old");
+    fs.writeFileSync(datFile, writeServersDat(current));
+  }
+  fs.writeFileSync(recordFile, JSON.stringify([...done]));
+  return added;
+}
 
 /* Self-update from GitHub releases */
 
@@ -1458,6 +1493,7 @@ ipcMain.handle("launch", async (_e, { server, profileId } = {}) => {
 
     const instanceDir = path.join(ROOT, "instances", profile.id);
     fs.mkdirSync(instanceDir, { recursive: true });
+    try { syncServersInto(instanceDir); } catch {}
 
     const opts = {
       root: ROOT,

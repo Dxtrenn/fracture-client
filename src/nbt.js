@@ -55,4 +55,23 @@ function readServersDat(buf) {
     .map((s) => ({ name: String(s.name || s.ip).slice(0, 40), ip: s.ip.trim(), icon: typeof s.icon === "string" ? s.icon : null }));
 }
 
-module.exports = { readNbt, readServersDat };
+/** Builds a servers.dat buffer from [{ name, ip, icon }], the same layout Minecraft writes. */
+function writeServersDat(list) {
+  const parts = [];
+  const u8 = (v) => parts.push(Buffer.from([v]));
+  const i32 = (v) => { const b = Buffer.alloc(4); b.writeInt32BE(v); parts.push(b); };
+  const str = (s) => { const d = Buffer.from(String(s), "utf8"); const b = Buffer.alloc(2); b.writeUInt16BE(d.length); parts.push(b, d); };
+  const strTag = (name, value) => { u8(8); str(name); str(value); };
+  u8(10); str(""); // root compound
+  u8(9); str("servers"); u8(10); i32(list.length);
+  for (const s of list) {
+    strTag("name", s.name || s.ip);
+    strTag("ip", s.ip);
+    if (s.icon) strTag("icon", s.icon);
+    u8(0); // end of this server
+  }
+  u8(0); // end of root
+  return Buffer.concat(parts);
+}
+
+module.exports = { readNbt, readServersDat, writeServersDat };
