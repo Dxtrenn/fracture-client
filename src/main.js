@@ -896,6 +896,12 @@ ipcMain.handle("news:open", (_e, url) => {
   if (/^https:\/\//.test(String(url))) shell.openExternal(url);
 });
 
+// Bedrock: Minecraft for Windows registers the minecraft: link, so opening it starts the game
+ipcMain.handle("bedrock:play", async () => {
+  if (process.platform !== "win32") return false;
+  try { await shell.openExternal("minecraft:"); return true; } catch { return false; }
+});
+
 ipcMain.handle("server:ping", async (_e, ip) => {
   try {
     const r = await getJson(`https://api.mcsrvstat.us/3/${encodeURIComponent(ip)}`);

@@ -869,3 +869,66 @@ body.layout-alt .tab { position: relative; }
 .dh-skin { bottom: 44px; height: 200px; }
 .dh-hero { min-height: 320px; }
 body.layout-prism #prismHome { display: flex; }
+
+/* Loading screen v2: dark blue-black, Minecraft-style bar, shatters like glass */
+.splash { background: #0d0f17; transition: none; }
+.splash.gone { opacity: 0; visibility: hidden; }
+.splash-logo { animation: none; width: 150px; image-rendering: pixelated; filter: none; }
+.splash-word { font-size: 40px; }
+.splash-bar { width: 44%; max-width: 520px; height: 14px; border-radius: 0; border: 2px solid #e8e8f0; padding: 2px; background: none; margin-top: 30px; }
+.splash-bar i { width: 0; border-radius: 0; background: #e8e8f0; animation: none; }
+.splash-status { color: #8a8fa8; }
+.shatter { position: fixed; inset: 0; z-index: 201; pointer-events: none; }
+.shatter svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.shard { position: absolute; inset: 0; will-change: transform; }
+.shard .splash { visibility: visible; opacity: 1; }
+.fr .who b .team-ico { height: 14px; width: auto; vertical-align: -2px; margin-right: 5px; image-rendering: auto; border-radius: 0; }
+.fr .who b[style*="#8b0000"] { color: #e0333f !important; }
+
+/* Cape animations (from the notes) */
+@keyframes blink{0%,90%,100%{transform:scaleY(1)}94%{transform:scaleY(.1)}}
+@keyframes flick{0%,100%{transform:scaleY(1) skewX(0)}50%{transform:scaleY(1.08) skewX(3deg)}}
+@keyframes flick2{0%,100%{transform:scaleY(1.05) skewX(-2deg)}50%{transform:scaleY(.95) skewX(2deg)}}
+@keyframes glint{0%,80%,100%{opacity:0}88%{opacity:1}}
+@keyframes tw{0%,100%{opacity:.25}50%{opacity:1}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
+@keyframes wave{0%{transform:translateX(0)}100%{transform:translateX(-40px)}}
+@keyframes fall{0%{transform:translate(0,-20px) rotate(0)}100%{transform:translate(-20px,230px) rotate(240deg)}}
+@keyframes glow{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes beat{0%,100%{transform:scale(1)}15%{transform:scale(1.12)}30%{transform:scale(1)}45%{transform:scale(1.08)}}
+@keyframes slide{0%{transform:translateY(0)}100%{transform:translateY(-34px)}}
+@keyframes snow{0%{transform:translateY(-10px)}100%{transform:translateY(220px)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.cape-svg .g{transform-box:fill-box;transform-origin:center}
+
+/* Shop */
+.shop-points { display: flex; align-items: baseline; gap: 6px; padding: 6px 12px; border-radius: 8px; background: var(--panel2); }
+.shop-points span { color: var(--accent2); } .shop-points b { font-size: 18px; } .shop-points small { color: var(--muted); font-size: 11px; }
+.shop-today { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.shop-today-bar { flex: 0 0 200px; height: 6px; border-radius: 6px; background: var(--panel2); overflow: hidden; }
+.shop-today-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+.shop-today small { color: var(--muted); font-size: 12px; }
+.shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; overflow-y: auto; align-content: start; }
+.shop-item { background: var(--panel2); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; border: 1px solid transparent; }
+.shop-item.worn { border-color: var(--accent); }
+.shop-item .cape-svg svg { width: 96px; height: auto; display: block; }
+.shop-item b { font-size: 13px; text-align: center; }
+.shop-item .season { font-size: 10px; color: var(--accent2); font-weight: 800; }
+.shop-item button { width: 100%; }
+
+/* Dev chat */
+.side-pane.chat-pane.active { justify-content: flex-start; align-items: stretch; padding: 10px 14px 14px; gap: 8px; }
+.chat-head { font-size: 11px; font-weight: 900; letter-spacing: 1px; color: var(--accent); display: flex; flex-direction: column; }
+.chat-head small { font-weight: 600; letter-spacing: 0; color: var(--muted); }
+.chat-log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.chat-msg { background: var(--panel2); border-radius: 8px; padding: 7px 10px; }
+.chat-who { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.chat-who img { height: 13px; }
+.chat-who small { margin-left: auto; color: var(--muted); font-size: 10px; }
+.chat-msg p { font-size: 13px; margin-top: 3px; user-select: text; word-break: break-word; }
+.side-tab.unread::after { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-left: 4px; vertical-align: 1px; }
+
+/* Bedrock button and theme codes */
+.bedrock-btn { padding: 0 16px; font-weight: 800; }
+.tp-codes { display: flex; gap: 8px; }
+.tp-codes .tp-wide { flex: 1; }

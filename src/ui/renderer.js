@@ -1224,9 +1224,9 @@ document.addEventListener("keydown", (e) => {
 const DEFAULT_THEME = { mode: "dark", colors: ["#ff3b4e", "#ff7a3b"], intensity: 0, angle: 135, font: "Segoe UI", icons: "classic", buttonSize: 100 };
 const THEME_FONTS = ["Segoe UI", "Minecraft", "Bahnschrift", "Trebuchet MS", "Verdana", "Tahoma", "Georgia", "Consolas", "Lucida Console", "Franklin Gothic Medium", "Segoe Print", "Comic Sans MS", "Impact"];
 const ICON_SETS = {
-  classic: { play: "▶", profiles: "▤", mods: "▦", skins: "☻", capes: "◭", events: "★" },
-  emoji: { play: "🎮", profiles: "🗂", mods: "🧩", skins: "👕", capes: "🧣", events: "🎁" },
-  none: { play: "", profiles: "", mods: "", skins: "", capes: "", events: "" },
+  classic: { play: "▶", profiles: "▤", mods: "▦", skins: "☻", capes: "◭", events: "★", shop: "◆" },
+  emoji: { play: "🎮", profiles: "🗂", mods: "🧩", skins: "👕", capes: "🧣", events: "🎁", shop: "💎" },
+  none: { play: "", profiles: "", mods: "", skins: "", capes: "", events: "", shop: "" },
 };
 const BASES = {
   dark: { bg: "#07070a", panel: "#111116", panel2: "#18181f", line: "#22222c", text: "#ececf1", muted: "#7d7d8c", card: "#0d0d12" },
@@ -1510,6 +1510,8 @@ async function fractureConnect(force) {
   }
   $("devPanel").classList.toggle("hidden", !isDev);
   $("tpPresetsWrap").classList.toggle("hidden", !isDev);
+  $("devChatTab").classList.toggle("hidden", !isDev);
+  if (isDev) pollChat();
   if (isDev) renderBugs();
   renderFriends();
   if (fUser?.color) $("devPanel").style.setProperty("--dev", fUser.color);
@@ -1598,10 +1600,20 @@ $("eventList").addEventListener("click", async (e) => {
 
 // Loading screen: stays up while we sign in to the Fracture server (never more than 6 seconds)
 {
-  const hideSplash = () => $("splash").classList.add("gone");
-  $("splashStatus").textContent = "Signing in to Fracture...";
-  setTimeout(hideSplash, 6000);
-  fractureConnect().finally(() => { $("splashStatus").textContent = "Ready"; setTimeout(hideSplash, 250); });
+  // Bar fills while we sign in, then the screen cracks and shatters like glass to show the launcher
+  let done = false, shown = 0;
+  const t0 = performance.now();
+  (function grow(t) {
+    if (done && shown >= 1) return;
+    const target = done ? 1 : Math.min(0.9, (t - t0) / 3000);
+    shown += (target - shown) * 0.12;
+    if (done && shown > 0.995) shown = 1;
+    $("splashFill").style.width = shown * 100 + "%";
+    if (shown < 1) requestAnimationFrame(grow); else setTimeout(shatterSplash, 250);
+  })(t0);
+  const finish = () => { if (!done) { done = true; $("splashStatus").textContent = "Ready"; } };
+  setTimeout(finish, 6000);
+  fractureConnect().finally(finish);
 }
 setInterval(renderBroadcasts, 5 * 60 * 1000);
 
@@ -1630,6 +1642,7 @@ $("devBugList").addEventListener("click", async (e) => {
 });
 
 /* ---- Friends and the team list ---- */
+const TEAM_ICONS = { "red-cross": "cross", fishbones: "fish", "pig-snout": "pig", rose: "rose" };
 const head = (uuid) => `https://mc-heads.net/avatar/${uuid}/28`;
 const frRow = (f, buttons = "") =>
   `<div class="fr ${f.online ? "on" : ""}"><img src="${head(f.uuid)}" alt="" /><div class="who"><b>${escH(f.name)}</b><small>${f.online ? escH(f.status || "Online") : "Offline"}</small></div>${buttons}<span class="dot"></span></div>`;
@@ -1638,7 +1651,7 @@ async function renderFriends() {
   const t = await api.fractureApi("GET", "/team");
   const team = t.data?.team || [];
   $("teamList").innerHTML = team.map((m) =>
-    frRow({ uuid: m.uuid, name: m.display, online: m.online, status: m.status }).replace("<b>", `<b style="color:${escH(m.color)}">`)).join("") || `<div class="fr-empty">Can't reach the Fracture server.</div>`;
+    frRow({ uuid: m.uuid, name: m.display, online: m.online, status: m.status }).replace("<b>", `<b style="color:${escH(m.color)}">${TEAM_ICONS[m.icon] ? `<img class="team-ico" src="team/${TEAM_ICONS[m.icon]}.png" alt="" />` : ""}`)).join("") || `<div class="fr-empty">Can't reach the Fracture server.</div>`;
   if (!fUser) {
     $("frList").innerHTML = `<div class="fr-empty">Sign in to add friends.</div>`;
     $("frIncoming").innerHTML = "";
@@ -2046,5 +2059,163 @@ $("pmMods").onclick = () => document.querySelector('[data-tab="mods"]').click();
 $("pmNewsBtn").onclick = () => api.openNewsLink("https://fracture-client.github.io/");
 document.querySelector('[data-tab="play"]').addEventListener("click", renderPrism);
 
+/* ---- Shop: points from playtime, capes from the ideas notes. The server owns balances and ownership ---- */
+async function renderShop() {
+  const r = await api.fractureApi("GET", "/shop");
+  if (!r.ok) { $("shopGrid").innerHTML = `<div class="empty-ev">Can't reach the Fracture server right now.</div>`; return; }
+  const d = r.data;
+  const owned = new Set(d.owned || []);
+  $("shopBalance").textContent = fUser ? (d.balance ?? 0).toLocaleString() : "–";
+  $("shopToday").textContent = fUser ? `${d.today ?? 0} / ${d.dailyCap} earned today` : "Sign in to earn points";
+  $("shopTodayBar").style.width = fUser ? Math.min(100, ((d.today || 0) / d.dailyCap) * 100) + "%" : "0";
+  $("shopGrid").innerHTML = d.items.map((it) => {
+    const have = owned.has(it.id), worn = d.equipped === it.id;
+    const btn = !fUser ? `<button class="pill" disabled>SIGN IN</button>`
+      : worn ? `<button class="pill" data-unequip="1">✓ WEARING</button>`
+      : have ? `<button class="pill accent" data-equip="${it.id}">WEAR</button>`
+      : it.price == null ? `<button class="pill" disabled>WIN A GIVEAWAY</button>`
+      : `<button class="pill accent" data-buy="${it.id}" ${(d.balance || 0) < it.price ? "disabled" : ""}>◆ ${it.price}</button>`;
+    return `<div class="shop-item${worn ? " worn" : ""}"><div class="cape-svg">${CAPE_SVGS[it.name] || ""}</div><b>${escH(it.name)}</b>${it.season ? '<small class="season">Seasonal</small>' : ""}${btn}</div>`;
+  }).join("");
+}
+$("shopGrid").addEventListener("click", async (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  let r;
+  if (b.dataset.buy) {
+    const item = b.closest(".shop-item").querySelector("b").textContent;
+    if (!(await ask({ title: `Buy ${item}?`, message: `It costs ${b.textContent.replace("◆", "").trim()} points. Capes are visual only.`, ok: "Buy", icon: "◆" }))) return;
+    r = await api.fractureApi("POST", `/shop/${b.dataset.buy}/buy`);
+  } else if (b.dataset.equip) r = await api.fractureApi("POST", "/equip", { cape: b.dataset.equip });
+  else if (b.dataset.unequip) r = await api.fractureApi("POST", "/equip", { cape: null });
+  else return;
+  if (!r.ok) ask({ title: "Couldn't do that", message: r.data?.error || "Error " + r.status, icon: "!" });
+  renderShop();
+});
+document.querySelector('[data-tab="shop"]').addEventListener("click", renderShop);
+
+/* ---- Dev chat (team only; the server checks) ---- */
+let chatLast = 0;
+async function pollChat() {
+  if (fUser?.role !== "dev") return;
+  const r = await api.fractureApi("GET", `/chat?after=${chatLast}`);
+  const list = r.data?.messages || [];
+  if (!list.length) return;
+  const atBottom = $("chatLog").scrollHeight - $("chatLog").scrollTop - $("chatLog").clientHeight < 40;
+  for (const m of list) {
+    chatLast = Math.max(chatLast, m.id);
+    const el = document.createElement("div");
+    el.className = "chat-msg";
+    const ico = TEAM_ICONS[m.icon] ? `<img src="team/${TEAM_ICONS[m.icon]}.png" alt="" />` : "";
+    const time = new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    el.innerHTML = `<div class="chat-who">${ico}<b style="color:${escH(m.color || "#fff")}">${escH(m.name || "?")}</b><small>${time}</small></div><p></p>`;
+    el.querySelector("p").textContent = m.message;
+    $("chatLog").appendChild(el);
+  }
+  if (atBottom) $("chatLog").scrollTop = $("chatLog").scrollHeight;
+  if (!$("side-devchat").classList.contains("active")) document.querySelector('[data-side="devchat"]').classList.add("unread");
+}
+async function sendChat() {
+  const message = $("chatInput").value.trim();
+  if (!message) return;
+  $("chatInput").value = "";
+  const r = await api.fractureApi("POST", "/chat", { message });
+  if (!r.ok) ask({ title: "Message not sent", message: r.data?.error || "Error " + r.status, icon: "!" });
+  pollChat();
+}
+$("chatSend").addEventListener("click", sendChat);
+$("chatInput").addEventListener("keydown", (e) => { if (e.key === "Enter") sendChat(); });
+document.querySelector('[data-side="devchat"]').addEventListener("click", (e) => {
+  e.currentTarget.classList.remove("unread");
+  setTimeout(() => ($("chatLog").scrollTop = $("chatLog").scrollHeight), 50);
+});
+setInterval(pollChat, 5000);
+
+/* ---- Play Bedrock (Windows): opens the Minecraft Bedrock app if it's installed ---- */
+if (api.platform === "win32") $("bedrockBtn").classList.remove("hidden");
+$("bedrockBtn").addEventListener("click", async () => {
+  const ok = await api.playBedrock();
+  if (!ok) ask({ title: "Bedrock isn't installed", message: "Install Minecraft for Windows from the Microsoft Store or the Xbox app first.", icon: "!" });
+});
+
+/* ---- Theme codes: share a theme as a short code ---- */
+$("tpCopyCode").addEventListener("click", async () => {
+  const { layout, ...shareable } = draft; // layouts stay dev-only
+  const code = "FRC1-" + btoa(unescape(encodeURIComponent(JSON.stringify(shareable))));
+  try { await navigator.clipboard.writeText(code); } catch {}
+  ask({ title: "Theme code copied", message: "Send it to a friend. They paste it with Paste code in their theme editor.", icon: "✓" });
+});
+$("tpPasteCode").addEventListener("click", async () => {
+  const code = (await ask({ title: "Paste a theme code", ok: "Use it", icon: "✎", input: "FRC1-..." }) || "").trim();
+  if (!code) return;
+  try {
+    if (!code.startsWith("FRC1-")) throw 0;
+    const t = JSON.parse(decodeURIComponent(escape(atob(code.slice(5)))));
+    const colors = (t.colors || []).filter((c) => /^#[0-9a-f]{6}$/i.test(c)).slice(0, 6);
+    if (!colors.length) throw 0;
+    draft = { ...JSON.parse(JSON.stringify(DEFAULT_THEME)), ...t, colors, layout: undefined };
+    if (t.base && typeof t.base !== "object") delete draft.base;
+    activeStop = 0;
+    syncThemeForm();
+  } catch {
+    ask({ title: "That code doesn't work", message: "Theme codes start with FRC1-. Ask your friend to copy it again.", icon: "!" });
+  }
+});
+
 window.layoutsReady = true;
 setLayout(theme.layout || null);
+
+function shatterSplash() {
+  const sp = $("splash"), NS = "http://www.w3.org/2000/svg";
+  if (sp.classList.contains("gone")) return;
+  const W = innerWidth, H = innerHeight, cx = W / 2, cy = H * 0.45, N = 11;
+  const rings = [0, W * 0.07, W * 0.17, W * 0.32, W * 0.55, W * 1.2];
+  const pts = rings.map((r, ri) => Array.from({ length: N }, (_, k) => {
+    const ang = (k / N) * Math.PI * 2 + (ri ? (Math.random() - 0.5) * 0.35 : 0), rr = r * (ri ? 0.85 + Math.random() * 0.3 : 0);
+    return [cx + Math.cos(ang) * rr, cy + Math.sin(ang) * rr];
+  }));
+  const holder = document.createElement("div");
+  holder.className = "shatter";
+  document.body.appendChild(holder);
+  // Crack lines draw in first
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const lines = [];
+  for (let ri = 0; ri < rings.length - 1; ri++) for (let k = 0; k < N; k++) {
+    const a = pts[ri][k], b = pts[ri + 1][k], c = pts[ri + 1][(k + 1) % N];
+    lines.push(`M${a} L${b}`, `M${b} L${c}`);
+  }
+  const path = document.createElementNS(NS, "path");
+  path.setAttribute("d", lines.join(" "));
+  path.setAttribute("stroke", "#dfe6ff"); path.setAttribute("stroke-width", "1.5"); path.setAttribute("fill", "none");
+  svg.appendChild(path); holder.appendChild(svg);
+  const L = path.getTotalLength();
+  path.style.strokeDasharray = L;
+  path.animate([{ strokeDashoffset: L }, { strokeDashoffset: 0 }], { duration: 350, fill: "forwards", easing: "ease-out" });
+  sp.animate([{ transform: "translate(0,0)" }, { transform: "translate(-6px,4px)" }, { transform: "translate(5px,-3px)" }, { transform: "translate(0,0)" }], { duration: 250 });
+  setTimeout(() => {
+    // Each piece is a copy of the loading screen clipped to one shard, then it falls away
+    for (let ri = 0; ri < rings.length - 1; ri++) for (let k = 0; k < N; k++) {
+      const poly = [pts[ri][k], pts[ri][(k + 1) % N], pts[ri + 1][(k + 1) % N], pts[ri + 1][k]];
+      const s = document.createElement("div");
+      s.className = "shard";
+      s.style.clipPath = "polygon(" + poly.map((q) => q[0] + "px " + q[1] + "px").join(",") + ")";
+      const c = sp.cloneNode(true);
+      c.removeAttribute("id");
+      c.querySelectorAll("[id]").forEach((e) => e.removeAttribute("id"));
+      s.appendChild(c);
+      holder.insertBefore(s, svg);
+      const mx = poly.reduce((a, q) => a + q[0], 0) / 4, my = poly.reduce((a, q) => a + q[1], 0) / 4;
+      const dx = (mx - cx) * 0.35 + (Math.random() - 0.5) * 60, rot = (Math.random() - 0.5) * 70;
+      s.style.transformOrigin = mx + "px " + my + "px";
+      s.animate([
+        { transform: "translate(0,0) rotate(0)", opacity: 1 },
+        { transform: `translate(${dx}px,${H * 0.25}px) rotate(${rot * 0.4}deg)`, opacity: 1, offset: 0.4 },
+        { transform: `translate(${dx * 1.6}px,${H * 1.3}px) rotate(${rot}deg)`, opacity: 0.9 },
+      ], { duration: 1300 + Math.random() * 500, delay: (4 - ri) * 60 + Math.random() * 120, easing: "cubic-bezier(.4,0,.9,.6)", fill: "forwards" });
+    }
+    sp.classList.add("gone");
+    svg.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, fill: "forwards" });
+    setTimeout(() => holder.remove(), 2400);
+  }, 550);
+}
